@@ -326,9 +326,8 @@ export default function Home() {
           <Image
             src="/images/logo.png"
             alt="TaskWise Logo"
-            width={32}
-            height={32}
-            className="mr-2 h-6 w-6" // Adjust size as needed
+            width={128}
+            height={128}
           />
           <CardTitle>TaskWise</CardTitle>
           <CardDescription>
