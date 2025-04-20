@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, lazy, Suspense, useEffect, useCallback, useRef } from "react";
+import React, { useState, lazy, Suspense, useEffect, useCallback, useRef, Dispatch, SetStateAction } from "react";
 import {
   Card,
   CardContent,
@@ -85,6 +85,19 @@ const defaultTasks: Task[] = [
 // Lazy load the TaskEditForm component
 const TaskEditForm = lazy(() => import('@/components/TaskEditForm').then(module => ({ default: module.TaskEditForm })));
 
+// Define a more specific type for initial icons
+const initialCategoryIcons: { [key: string]: string } = {
+  Work: "💼",
+  Home: "🏠",
+  Errands: "🏃‍♂️",
+  Personal: "👤",
+  Health: "⚕️",
+  Finance: "💰",
+  Education: "📚",
+  Social: "🫂",
+  Travel: "✈️",
+  Other: "📌",
+};
 
 export default function Home() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -103,6 +116,8 @@ export default function Home() {
   const [showUndo, setShowUndo] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false); // State for Emoji Picker visibility
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false); // State for create category dialog
+  // Use the more generic type for the state setter to match TaskEditForm prop
+  const [categoryIconsState, setCategoryIconsState]: [ { [key: string]: string }, Dispatch<SetStateAction<{ [key: string]: string }>> ] = useState(initialCategoryIcons);
 
 
   const handleAddTask = async () => {
@@ -155,6 +170,16 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
+
+    // Clear any existing timeout
+    if (undoTimeout.current) {
+      clearTimeout(undoTimeout.current);
+    }
+
+    // Set a timeout to hide the undo option after 5 seconds
+    undoTimeout.current = window.setTimeout(() => {
+      setShowUndo(false);
+    }, 5000);
   };
 
   const handleTaskCompletion = (id: string, completed: boolean) => {
@@ -249,10 +274,10 @@ export default function Home() {
     setTempTask(null);
   };
 
-  function getPriorityColor(priority: number | undefined) {
+  function getPriorityColor(priority: number | undefined): "destructive" | "secondary" | "default" {
     if (!priority) return "secondary";
     if (priority > 75) return "destructive";
-    if (priority > 50) return "primary";
+    if (priority > 50) return "default"; // Changed from "primary"
     return "secondary";
   }
 
@@ -281,8 +306,6 @@ export default function Home() {
     Travel: "✈️",
     Other: "📌",
   };
-
-  const [categoryIconsState, setCategoryIconsState] = useState(categoryIcons);
 
   const handleCreateCategory = () => {
     if (customCategory.trim() && customCategoryEmoji.trim()) {
@@ -347,7 +370,6 @@ export default function Home() {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={undefined}>Clear</SelectItem>
                 {Object.entries(categoryIconsState).map(([category, icon]) => (
                   <SelectItem key={category} value={category}>
                     {icon} {category}
@@ -405,7 +427,11 @@ export default function Home() {
                       <Checkbox
                         id={`task-${task.id}`}
                         checked={task.completed}
-                        onCheckedChange={(e) => handleTaskCompletion(task.id, e)}
+                        onCheckedChange={(checked) => {
+                          if (typeof checked === 'boolean') {
+                            handleTaskCompletion(task.id, checked);
+                          }
+                        }}
                       />
                       <Label htmlFor={`task-${task.id}`} style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.5 : 1 }}>{task.title}</Label>
                     </div>
@@ -445,9 +471,11 @@ export default function Home() {
                                   <Checkbox
                                     id={`subtask-${subtask.id}`}
                                     checked={subtask.completed}
-                                    onCheckedChange={(e) =>
-                                      handleSubtaskCompletion(task.id, subtask.id, e)
-                                    }
+                                    onCheckedChange={(checked) => {
+                                      if (typeof checked === 'boolean') {
+                                        handleSubtaskCompletion(task.id, subtask.id, checked);
+                                      }
+                                    }}
                                   />
                                   <Label htmlFor={`subtask-${subtask.id}`}  style={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}>{subtask.title}</Label>
                                 </li>
