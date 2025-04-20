@@ -88,6 +88,8 @@ The prioritization algorithm will:
 - Apply category-specific urgency multipliers for tasks due within 7 days
 - Ensure scores remain within the 1-100 range
 
+*Status: [✅ Done]*
+
 ### Subtask Generation
 
 Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](file:///C:/Users/dontb/Documents/repos/to-do-ai/src/ai/flows/suggest-subtasks.ts) to:
@@ -101,7 +103,7 @@ Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](fi
 
 Implement the automatic categorization flow in `src/ai/flows/categorize-task.ts`:
 
-*Status: [🚧 To Do]*
+*Status: [✅ Done]*
 
 ## 4. User Interface Implementation [🚧 In Progress]
 
@@ -130,6 +132,8 @@ Implement components to:
 - Show deadline, importance, category, and priority score
 - Provide options to edit, complete, or delete tasks
 - Expand to show subtasks
+
+*Status: `task-item.tsx` [✅ Created], includes subtask regeneration. `task-list.tsx` [✅ Created]. `subtask-list.tsx` [🚧 To Do].*
 
 ## 5. Database Setup
 
@@ -278,5 +282,11 @@ export async function createTask(formData: FormData) {
 
 5. **Progressive Web App (PWA)**:
    - Configure for offline use as a PWA
+
+6. **Kanban-Style UI (Optional)**:
+   - Implement a multi-column layout (similar to Trello or TickTick) where columns could represent categories, statuses, or custom groupings.
+   - Use a library like `@dnd-kit` to enable drag-and-drop functionality for tasks between columns and for reordering within columns.
+   - Restructure state to manage columns and the tasks within them.
+   - Implement column creation and potentially column resizing.
 
 This implementation guide provides a comprehensive roadmap for developing and deploying the TaskWise application on Vercel, leveraging the power of Next.js, Genkit AI, and Vercel's infrastructure.
