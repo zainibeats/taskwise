@@ -12,12 +12,12 @@ import {ai} from '@/ai/ai-instance';
 import {z} from 'genkit';
 
 const CategorizeTaskInputSchema = z.object({
-  task: z.string().describe('The task to be categorized.'),
+  taskDescription: z.string().describe('The task description to be categorized.'),
 });
 export type CategorizeTaskInput = z.infer<typeof CategorizeTaskInputSchema>;
 
 const CategorizeTaskOutputSchema = z.object({
-  category: z.string().describe('The category of the task (e.g., work, personal, errands).'),
+  category: z.string().describe('The category that best fits the task from the predefined list.'),
 });
 export type CategorizeTaskOutput = z.infer<typeof CategorizeTaskOutputSchema>;
 
@@ -29,19 +29,19 @@ const prompt = ai.definePrompt({
   name: 'categorizeTaskPrompt',
   input: {
     schema: z.object({
-      task: z.string().describe('The task to be categorized.'),
+      taskDescription: z.string().describe('The task description to be categorized.'),
     }),
   },
   output: {
     schema: z.object({
-      category: z.string().describe('The category of the task (e.g., work, personal, errands).'),
+      category: z.string().describe('The category that best fits the task from the predefined list.'),
     }),
   },
-  prompt: `You are a task categorization expert.  Given the task, determine the most appropriate category for it.
+  prompt: `You are a task categorization expert. Given the task description, determine the most appropriate category for it from the following list: Health, Finance, Work, Personal, Errands, Other.
 
-Task: {{{task}}}
+Task Description: {{{taskDescription}}}
 
-Category:`,
+Category: `,
 });
 
 const categorizeTaskFlow = ai.defineFlow<
