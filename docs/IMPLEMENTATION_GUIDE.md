@@ -83,12 +83,12 @@ The task prioritization flow in [`src/ai/flows/prioritize-task.ts`](file:///C:/U
 2. Days until deadline
 3. Category-specific urgency ratios
 
-The prioritization algorithm will:
-- Base the priority on importance (multiplied by 10)
-- Apply category-specific urgency multipliers for tasks due within 7 days
-- Ensure scores remain within the 1-100 range
+The prioritization algorithm will be refined to:
+- Calculate a base priority from importance.
+- Modulate the impact of the deadline based on the task category, preventing less important categories (e.g., "Personal") from receiving excessively high priorities simply due to imminent deadlines.
+- Ensure scores remain within the 1-100 range, providing a meaningful distribution even for tasks due soon.
 
-*Status: [✅ Done]*
+*Status: [✅ Done, Needs Refinement]*
 
 ### Subtask Generation
 
