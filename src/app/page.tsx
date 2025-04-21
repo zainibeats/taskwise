@@ -125,33 +125,55 @@ export default function Home() {
 
     setIsLoading(true);
 
+    // Create initial task object
+    let taskCategory = selectedCategory; // Use selected category if available
     const newTask: Task = {
       id: Date.now().toString(),
       title: newTaskTitle,
       completed: false,
-      category: selectedCategory,
+      category: taskCategory, // Assign potentially undefined category initially
+      deadline: selectedDate, // Assign selected date
+      subtasks: [], // Initialize subtasks
+      priority: undefined // Initialize priority
     };
 
     try {
-      const priorityResult = await prioritizeTask({
-        task: newTask.title,
-        deadline: selectedDate?.toISOString() || new Date().toISOString(),
-        importance: 5,
-        category: newTask.category || "Other",
-      });
-      const subtasksResult = await suggestSubtasks({
-        taskDescription: newTask.title,
-      });
+      // --- AI Categorization (if needed) ---
+      if (!taskCategory) {
+        const categoryResult = await categorizeTask({ taskDescription: newTask.title });
+        taskCategory = categoryResult.category; // Assign AI category
+        newTask.category = taskCategory; // Update task object
+        toast({ title: "AI Assigned Category", description: `Task assigned to: ${taskCategory}` });
+      }
 
+      // Ensure we have a category for prioritization (default to "Other" if AI fails?)
+      const categoryForPrioritization = taskCategory || "Other";
+
+      // --- AI Prioritization & Subtasks ---
+      const [priorityResult, subtasksResult] = await Promise.all([
+        prioritizeTask({
+          task: newTask.title,
+          deadline: newTask.deadline?.toISOString() || new Date().toISOString(),
+          importance: 5, // Default importance for now
+          category: categoryForPrioritization, // Use determined category
+        }),
+        suggestSubtasks({
+          taskDescription: newTask.title,
+        })
+      ]);
+
+      // Update task with AI results
       newTask.priority = priorityResult.priorityScore;
-      newTask.deadline = selectedDate;
-      newTask.subtasks = subtasksResult.subtasks.map((subtask, index) => ({
+      newTask.subtasks = subtasksResult.subtasks.map((subtaskTitle, index) => ({
         id: `${newTask.id}-subtask-${index}`,
-        title: subtask,
+        title: subtaskTitle,
         completed: false,
       }));
 
+      // Add task to state
       setTasks([...tasks, newTask]);
+
+      // Reset form
       setNewTaskTitle("");
       setSelectedDate(new Date());
       setSelectedCategory(undefined);
