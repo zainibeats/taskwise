@@ -7,32 +7,47 @@ body {
 }
 
 @layer base {
+  /* Dracula Light Theme */
   :root {
-    --background: 240 5.3% 96.1%; /* Light gray */
-    --foreground: 240 5.9% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 205 59.3% 54.1%; /* Calm blue */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 151 66.7% 42.9%; /* Emerald green */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --background: 60 33% 97%; /* #f8f8f2 */
+    --foreground: 246 11% 17%; /* #282a36 */
+
+    --card: 60 33% 97%; /* #f8f8f2 */
+    --card-foreground: 246 11% 17%; /* #282a36 */
+
+    --popover: 60 33% 97%; /* #f8f8f2 */
+    --popover-foreground: 246 11% 17%; /* #282a36 */
+
+    --primary: 194 98% 76%; /* #8be9fd - Dracula Cyan */
+    --primary-foreground: 246 11% 17%; /* #282a36 - Dracula Background for contrast */
+
+    --secondary: 232 15% 90%; /* Lightened Dracula Comment */
+    --secondary-foreground: 246 11% 17%; /* #282a36 */
+
+    --muted: 232 15% 95%; /* Lighter Dracula Comment */
+    --muted-foreground: 232 15% 51%; /* #6272a4 - Dracula Comment */
+
+    --accent: 145 95% 64%; /* #50fa7b - Dracula Green */
+    --accent-foreground: 246 11% 17%; /* #282a36 */
+
+    --destructive: 0 100% 67%; /* #ff5555 - Dracula Red */
+    --destructive-foreground: 60 33% 97%; /* #f8f8f2 */
+
+    --warning: 35 100% 71%; /* #ffb86c - Dracula Orange */
+    --warning-foreground: 246 11% 17%; /* #282a36 */
+
+    --border: 231 8% 85%; /* Lightened Dracula Current Line/Selection */
+    --input: 231 8% 85%; /* Lightened Dracula Current Line/Selection */
+    --ring: 194 98% 76%; /* #8be9fd - Dracula Cyan */
+
+    --radius: 0.5rem;
+    
+    /* Default chart/sidebar colors, can be themed later */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -42,26 +57,37 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  /* Dracula Dark Theme */
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 205 59.3% 54.1%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 151 66.7% 42.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --background: 246 11% 17%; /* #282a36 */
+    --foreground: 240 8% 97%; /* #f8f8f2 */
+    --card: 246 11% 17%; /* #282a36 */
+    --card-foreground: 240 8% 97%; /* #f8f8f2 */
+    --popover: 246 11% 17%; /* #282a36 */
+    --popover-foreground: 240 8% 97%; /* #f8f8f2 */
+
+    /* --primary: 256 64% 72%; /* #bd93f9 - Original Purple */
+    /* --primary-foreground: 240 8% 97%; */
+    --primary: 194 98% 76%; /* #8be9fd - Dracula Cyan */
+    --primary-foreground: 246 11% 17%; /* #282a36 - Dracula Background for contrast */
+
+    --secondary: 231 8% 31%; /* #44475a */
+    --secondary-foreground: 240 8% 97%; /* #f8f8f2 */
+    --muted: 232 15% 51%; /* #6272a4 */
+    --muted-foreground: 240 8% 97%; /* #f8f8f2 */
+    --accent: 145 95% 64%; /* #50fa7b */
+    --accent-foreground: 246 11% 17%; /* #282a36 */
+    --destructive: 0 100% 67%; /* #ff5555 */
+    --destructive-foreground: 240 8% 97%; /* #f8f8f2 */
+    --warning: 35 100% 71%; /* #ffb86c - Dracula Orange */
+    --warning-foreground: 246 11% 17%; /* #282a36 */
+    --border: 231 8% 31%; /* #44475a */
+    --input: 231 8% 31%; /* #44475a */
+    --ring: 194 98% 76%; /* #8be9fd - Dracula Cyan */
+
+    --radius: 0.5rem;
+    /* Chart and Sidebar colors remain default dark or can be themed later */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
