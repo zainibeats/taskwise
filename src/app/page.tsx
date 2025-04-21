@@ -36,6 +36,7 @@ import { Label } from "@/components/ui/label";
 import Image from 'next/image'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToastAction } from "@/components/ui/toast"
+import { HistoryControls } from "@/components/history-controls";
 
 interface Subtask {
   id: string;
@@ -119,6 +120,10 @@ export default function Home() {
 
   // Derive current tasks from history
   const tasks = history[historyIndex];
+
+  // Calculate canUndo/canRedo
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
   // Helper to push state to history
   const pushHistory = useCallback((newTasksState: Task[]) => {
@@ -303,11 +308,11 @@ export default function Home() {
     setTempTask(null);
   };
 
-  function getPriorityColor(priority: number | undefined): "destructive" | "secondary" | "default" {
-    if (!priority) return "secondary";
-    if (priority > 75) return "destructive";
-    if (priority > 50) return "default"; // Changed from "primary"
-    return "secondary";
+  // Function to determine border color class based on priority
+  function getPriorityBorderClass(priority: number | undefined): string {
+    if (!priority || priority <= 50) return "border-accent"; // Low priority (<= 50) -> Green (Accent)
+    if (priority <= 75) return "border-warning"; // Medium priority (> 50 and <= 75) -> Yellow (Warning)
+    return "border-destructive"; // High priority (> 75) -> Red (Destructive)
   }
 
   const taskCategories = [
@@ -366,25 +371,26 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col items-center text-center">
           <Image
             src="/images/logo.png"
             alt="TaskWise Logo"
             width={128}
             height={128}
           />
-          <CardTitle>TaskWise</CardTitle>
+          <CardTitle className="mt-2">TaskWise</CardTitle>
           <CardDescription>
             Organize your life with AI-powered task management.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex items-center space-x-2">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <Input
               type="text"
               placeholder="Add a task..."
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
+              className="flex-grow"
             />
             <Select onValueChange={handleCategorySelect} value={selectedCategory}>
               <SelectTrigger className="w-[180px]">
@@ -437,9 +443,15 @@ export default function Home() {
                 "Add Task"
               )}
             </Button>
+            <HistoryControls 
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+            />
           </div>
 
-          <ul className="space-y-2">
+          <ul className="space-y-2 mt-4">
             {tasks.map((task) => (
               <li key={task.id}>
                 <Card className="shadow-sm">
@@ -456,7 +468,13 @@ export default function Home() {
                       />
                       <Label htmlFor={`task-${task.id}`} style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.5 : 1 }}>{task.title}</Label>
                     </div>
-                    <Badge variant={getPriorityColor(task.priority)}>
+                    <Badge 
+                      variant="outline"
+                      className={cn(
+                        "border-2",
+                        getPriorityBorderClass(task.priority)
+                      )}
+                    >
                       {task.category ? `${categoryIconsState[task.category as keyof typeof categoryIconsState]} ${task.category}`: "No Category"} - Priority: {task.priority}
                     </Badge>
                   </CardHeader>
