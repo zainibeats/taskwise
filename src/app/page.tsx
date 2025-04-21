@@ -102,7 +102,8 @@ const initialCategoryIcons: { [key: string]: string } = {
 
 export default function Home() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [tasks, setTasks] = useState<Task[]>(defaultTasks);
+  const [history, setHistory] = useState<Task[][]>([defaultTasks]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -112,11 +113,52 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [customCategory, setCustomCategory] = useState("");
   const [customCategoryEmoji, setCustomCategoryEmoji] = useState("");
-  const [lastTaskState, setLastTaskState] = useState<Task[]>(tasks);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [categoryIconsState, setCategoryIconsState]: [ { [key: string]: string }, Dispatch<SetStateAction<{ [key: string]: string }>> ] = useState(initialCategoryIcons);
 
+  // Derive current tasks from history
+  const tasks = history[historyIndex];
+
+  // Helper to push state to history
+  const pushHistory = useCallback((newTasksState: Task[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    setHistory([...newHistory, newTasksState]);
+    setHistoryIndex(newHistory.length);
+  }, [history, historyIndex]); // Add dependencies
+
+  // --- Undo/Redo Handlers ---
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      toast({ title: "Undo performed" });
+    }
+  }, [historyIndex, toast]); // Add dependencies
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      toast({ title: "Redo performed" });
+    }
+  }, [historyIndex, history.length, toast]); // Add dependencies
+
+  // --- Keyboard Shortcut Effect ---
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        event.preventDefault(); // Prevent default browser undo/redo
+        if (event.shiftKey) {
+          // console.log("Redo triggered");
+          handleRedo();
+        } else {
+          // console.log("Undo triggered");
+          handleUndo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { window.removeEventListener('keydown', handleKeyDown); };
+  }, [handleUndo, handleRedo]); // Depend on the stable handlers
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
@@ -168,8 +210,8 @@ export default function Home() {
         completed: false,
       }));
 
-      // Add task to state
-      setTasks([...tasks, newTask]);
+      // Add task to state and history
+      pushHistory([...tasks, newTask]); // Use pushHistory
 
       // Reset form
       setNewTaskTitle("");
@@ -193,11 +235,6 @@ export default function Home() {
   };
 
   const handleTaskCompletion = (id: string, completed: boolean) => {
-    // Store the previous task state for potential undo
-    const previousTasks = [...tasks]; // Create a copy
-    setLastTaskState(previousTasks); 
-
-    // Update tasks state immediately
     const updatedTasks = tasks.map((task) => {
       if (task.id === id) {
         const updatedTask = { ...task, completed: completed };
@@ -211,55 +248,39 @@ export default function Home() {
       }
       return task;
     });
-    setTasks(updatedTasks);
-
-    // Show toast with Undo action
-    toast({
-      title: completed ? "Task marked as complete" : "Task marked as incomplete",
-      description: "You can undo this action.",
-      action: (
-        <ToastAction altText="Undo" onClick={() => handleUndo(previousTasks)}>
-          Undo
-        </ToastAction>
-      ),
-    });
+    pushHistory(updatedTasks); // Use pushHistory
+    // Remove toast with undo action
+    toast({ title: completed ? "Task marked complete" : "Task marked incomplete" });
   };
 
   const handleSubtaskCompletion = (taskId: string, subtaskId: string, completed: boolean) => {
-    setTasks(
-      tasks.map((task) => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            subtasks: task.subtasks?.map((subtask) =>
-              subtask.id === subtaskId ? { ...subtask, completed: completed } : subtask
-            ),
-          };
-        }
-        return task;
-      })
-    );
+    const updatedTasks = tasks.map((task) => {
+      if (task.id === taskId) {
+        return {
+          ...task,
+          subtasks: task.subtasks?.map((subtask) =>
+            subtask.id === subtaskId ? { ...subtask, completed: completed } : subtask
+          ),
+        };
+      }
+      return task;
+    });
+    pushHistory(updatedTasks); // Use pushHistory
   };
 
-  const handleUpdateTask = (id: string, updatedTask: Partial<Task>) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, ...updatedTask } : task
-      )
+  const handleUpdateTask = (id: string, updatedTaskPartial: Partial<Task>) => {
+    const updatedTasks = tasks.map((task) =>
+      task.id === id ? { ...task, ...updatedTaskPartial } : task
     );
+    pushHistory(updatedTasks); // Use pushHistory
     setEditingTaskId(null);
-    toast({
-      title: "Task updated",
-      description: "Your task has been updated successfully.",
-    });
+    toast({ title: "Task updated" });
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks(tasks.filter((task) => task.id !== id));
-    toast({
-      title: "Task deleted",
-      description: "The task has been permanently deleted.",
-    });
+    const updatedTasks = tasks.filter((task) => task.id !== id);
+    pushHistory(updatedTasks); // Use pushHistory
+    toast({ title: "Task deleted" });
   };
 
   const handleEditTask = (task: Task) => {
@@ -326,11 +347,6 @@ export default function Home() {
       setCustomCategoryEmoji("");
       setIsCreateCategoryOpen(false);
     }
-  };
-
-  const handleUndo = (previousTasks: Task[]) => {
-    setTasks(previousTasks); // Revert to the passed state
-    toast({ title: "Action undone" });
   };
 
   const handleEmojiSelect = (emoji: string) => {
