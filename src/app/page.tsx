@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import Image from 'next/image'
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { ToastAction } from "@/components/ui/toast"
 
 interface Subtask {
   id: string;
@@ -111,12 +112,9 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [customCategory, setCustomCategory] = useState("");
   const [customCategoryEmoji, setCustomCategoryEmoji] = useState("");
-  const undoTimeout = useRef<number | null>(null); // Use useRef for timeout
   const [lastTaskState, setLastTaskState] = useState<Task[]>(tasks);
-  const [showUndo, setShowUndo] = useState(false);
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false); // State for Emoji Picker visibility
-  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false); // State for create category dialog
-  // Use the more generic type for the state setter to match TaskEditForm prop
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [categoryIconsState, setCategoryIconsState]: [ { [key: string]: string }, Dispatch<SetStateAction<{ [key: string]: string }>> ] = useState(initialCategoryIcons);
 
 
@@ -192,28 +190,17 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-
-    // Clear any existing timeout
-    if (undoTimeout.current) {
-      clearTimeout(undoTimeout.current);
-    }
-
-    // Set a timeout to hide the undo option after 5 seconds
-    undoTimeout.current = window.setTimeout(() => {
-      setShowUndo(false);
-    }, 5000);
   };
 
   const handleTaskCompletion = (id: string, completed: boolean) => {
     // Store the previous task state for potential undo
-    setLastTaskState(tasks);
+    const previousTasks = [...tasks]; // Create a copy
+    setLastTaskState(previousTasks); 
 
+    // Update tasks state immediately
     const updatedTasks = tasks.map((task) => {
       if (task.id === id) {
-        // Update the main task
         const updatedTask = { ...task, completed: completed };
-
-        // Update all subtasks to match the main task's completion status
         if (updatedTask.subtasks) {
           updatedTask.subtasks = updatedTask.subtasks.map(subtask => ({
             ...subtask,
@@ -224,19 +211,18 @@ export default function Home() {
       }
       return task;
     });
-
     setTasks(updatedTasks);
-    setShowUndo(true);
 
-    // Clear any existing timeout
-    if (undoTimeout.current) {
-      clearTimeout(undoTimeout.current);
-    }
-
-    // Set a timeout to hide the undo option after 5 seconds
-    undoTimeout.current = window.setTimeout(() => {
-      setShowUndo(false);
-    }, 5000);
+    // Show toast with Undo action
+    toast({
+      title: completed ? "Task marked as complete" : "Task marked as incomplete",
+      description: "You can undo this action.",
+      action: (
+        <ToastAction altText="Undo" onClick={() => handleUndo(previousTasks)}>
+          Undo
+        </ToastAction>
+      ),
+    });
   };
 
   const handleSubtaskCompletion = (taskId: string, subtaskId: string, completed: boolean) => {
@@ -342,12 +328,9 @@ export default function Home() {
     }
   };
 
-  const handleUndo = () => {
-    if (undoTimeout.current) {
-      clearTimeout(undoTimeout.current);
-    }
-    setTasks(lastTaskState);
-    setShowUndo(false);
+  const handleUndo = (previousTasks: Task[]) => {
+    setTasks(previousTasks); // Revert to the passed state
+    toast({ title: "Action undone" });
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -521,11 +504,6 @@ export default function Home() {
               </li>
             ))}
           </ul>
-              {showUndo && (
-                <Button variant="outline" onClick={handleUndo}>
-                  Undo
-                </Button>
-              )}
         </CardContent>
       </Card>
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
@@ -608,7 +586,7 @@ interface EmojiPickerProps {
 }
 
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => {
-  const emojis = ["😀", "😂", "😎", "😍", "🤔", "😴", "🤯", "🤪", "👍", "👎", "❤️", "💯", "🔥", "⭐", "🚀", "🎉", "🐶", "🐱", "🐭", "⚽", "🏀", "🏈", "🌷", "🌻", "🌹", "🍎", "🚙", "🍇"];
+  const emojis = ["🤖", "🍽️", "🪴", "🍼", "🎁", "🎭", "🐾", "🧸", "🌐", "🔐", "🖥️", "🛠️", "💊", "⭐", "📧", "🎉", "🐶", "🐱", "🛐", "📞", "⚽", "🗨️", "🚜", "🎵", "💳", "✏️", "🚗", "🎬"];
 
   return (
     <div className="absolute z-10 bg-white shadow-md rounded-md p-2 w-64">
