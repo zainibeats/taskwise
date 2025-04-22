@@ -342,7 +342,7 @@ export default function Home() {
                 <Button
                   variant={"outline"}
                   className={cn(
-                    "w-[240px] justify-start text-left font-normal",
+                    "w-[240px] justify-start text-left font-normal category-green-btn",
                     !selectedDate && "text-muted-foreground"
                   )}
                 >
@@ -366,7 +366,7 @@ export default function Home() {
     <Button
       type="button"
       variant="outline"
-      className="w-full mt-2"
+      className="w-full mt-2 category-clear-btn"
       onClick={() => setSelectedDate(new Date())}
       disabled={!selectedDate || (selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'))}
     >
@@ -415,7 +415,7 @@ export default function Home() {
                       </div>
                     ))}
                 </div>
-                <AlertDialogCancel className="mt-4">Close</AlertDialogCancel>
+                <AlertDialogCancel className="mt-4 category-clear-btn">Close</AlertDialogCancel>
               </AlertDialogContent>
             </AlertDialog>
 
@@ -558,7 +558,7 @@ export default function Home() {
           <AlertDialogAction onClick={() => confirmDiscard(tempTask)}>
             Discard
           </AlertDialogAction>
-          <AlertDialogCancel onClick={cancelDiscard}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={cancelDiscard} className="category-clear-btn">Cancel</AlertDialogCancel>
         </AlertDialogContent>
       </AlertDialog>
       {/*
@@ -601,6 +601,7 @@ export default function Home() {
                 <Button
                   variant="outline"
                   size="icon"
+                  className="category-green-btn"
                   onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
                 >
                   <Icons.plusCircle className="h-4 w-4" />
@@ -616,7 +617,7 @@ export default function Home() {
               setIsCreateCategoryOpen(false);
               setCustomCategory("");
               setCustomCategoryEmoji("");
-            }}>Cancel</AlertDialogCancel>
+            }} className="category-clear-btn">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleCreateCategory}>Create</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -646,7 +647,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
 (emoji) => (
   <button
     key={emoji}
-    className="text-2xl hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+    className="text-2xl hover:bg-[rgba(139,233,253,0.1)] hover:text-[#8be9fd] rounded-md transition-colors"
     onClick={() => onEmojiSelect(emoji)}
   >
     {emoji}
@@ -654,7 +655,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
 ))}
           </div>
       </ScrollArea>
-      <Button variant="ghost" className="w-full mt-2" onClick={onClose}>
+      <Button variant="ghost" className="w-full mt-2 category-green-btn" onClick={onClose}>
         Close
       </Button>
     </div>

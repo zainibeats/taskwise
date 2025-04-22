@@ -45,7 +45,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
             {emojis.map((emoji) => (
               <button
                 key={emoji}
-                className="text-2xl hover:bg-gray-100 rounded-md"
+                className="text-2xl hover:bg-[rgba(139,233,253,0.1)] hover:text-[#8be9fd] rounded-md transition-colors"
                 onClick={() => onEmojiSelect(emoji)}
               >
                 {emoji}
@@ -53,7 +53,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
             ))}
           </div>
       </ScrollArea>
-      <Button variant="ghost" className="w-full mt-2" onClick={onClose}>
+      <Button variant="ghost" className="w-full mt-2 category-green-btn" onClick={onClose}>
         Close
       </Button>
     </div>
@@ -171,7 +171,7 @@ const handleCategorySelect = (value: string | undefined) => {
             <Button
               variant={"outline"}
               className={cn(
-                "w-[240px] justify-start text-left font-normal",
+                "w-[240px] justify-start text-left font-normal category-green-btn",
                 !deadline && "text-muted-foreground"
               )}
             >
@@ -197,7 +197,7 @@ const handleCategorySelect = (value: string | undefined) => {
         </Popover>
       </div>
       <div className="flex justify-end space-x-2">
-        <Button variant="secondary" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel} className="category-clear-btn">
           Cancel
         </Button>
         <Button onClick={handleSave}>Save</Button>

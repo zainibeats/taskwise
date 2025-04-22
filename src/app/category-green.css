@@ -5,20 +5,52 @@
 }
 .category-green-btn:hover,
 .category-green-btn:focus {
-  color: hsl(var(--primary));
-  border-color: hsl(var(--primary-foreground));
-  background: hsl(var(--primary) / 0.08);
+  color: #8be9fd; /* Dracula Cyan */
+  border-color: #8be9fd; /* Dracula Cyan */
+  background: rgba(139, 233, 253, 0.1); /* Dracula Cyan with opacity */
 }
 
-/* For SelectTrigger green hover */
+/* For SelectTrigger blue hover */
 .category-green-select .SelectTrigger:hover,
 .category-green-select .SelectTrigger:focus {
-  color: hsl(var(--primary));
-  border-color: hsl(var(--primary-foreground));
-  background: hsl(var(--primary) / 0.08);
+  color: #8be9fd; /* Dracula Cyan */
+  border-color: #8be9fd; /* Dracula Cyan */
+  background: rgba(139, 233, 253, 0.1); /* Dracula Cyan with opacity */
 }
 
-/* For SelectItem green hover (legacy) */
+/* For SelectItem blue hover */
+.select__item:hover,
+[data-radix-select-item]:hover,
+.select__item:focus,
+[data-radix-select-item]:focus {
+  color: #8be9fd; /* Dracula Cyan */
+  background: rgba(139, 233, 253, 0.1); /* Dracula Cyan with opacity */
+}
+
+/* For DropdownMenuItem blue hover */
+[role="menuitem"]:hover,
+[data-radix-dropdown-menu-item]:hover,
+[role="menuitem"]:focus,
+[data-radix-dropdown-menu-item]:focus {
+  color: #8be9fd !important; /* Dracula Cyan */
+  background: rgba(139, 233, 253, 0.1) !important; /* Dracula Cyan with opacity */
+}
+
+/* For Calendar day blue hover and selection */
+.rdp-day:hover:not(.rdp-day_selected):not([disabled]) {
+  color: #8be9fd !important; /* Dracula Cyan */
+  background: rgba(139, 233, 253, 0.1) !important; /* Dracula Cyan with opacity */
+}
+
+.rdp-day_selected,
+.rdp-day_selected:hover,
+.rdp-day_selected:focus {
+  color: #282a36 !important; /* Dracula Background */
+  background: #8be9fd !important; /* Dracula Cyan */
+}
+
+/* We're NOT overriding accent color as it affects the priority colors */
+/* The accent is used for the low priority (green) color */
 .category-green-select .SelectItem:hover,
 .category-green-select .SelectItem:focus,
 .category-green-select .select__item:hover,
