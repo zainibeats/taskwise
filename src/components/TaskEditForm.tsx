@@ -135,7 +135,6 @@ export function TaskEditForm({ task, onUpdate, onCancel, categoryIcons, setCateg
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={undefined}>Clear</SelectItem>
             {Object.entries(categoryIcons).map(([cat, icon]) => (
               <SelectItem key={cat} value={cat}>
                 {icon} {cat}
