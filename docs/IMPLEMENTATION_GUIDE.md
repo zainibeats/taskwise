@@ -147,9 +147,10 @@ Implement components to:
 
 For data persistence, TaskWise uses browser localStorage, providing several benefits:
 
-1. **Privacy**: All user data stays on their device, not on any server
+1. **Privacy**: All user data stays on their device, not on a server
 2. **Simplicity**: No database setup required for self-hosting
 3. **Offline Use**: Application remains functional without internet connection
+4. **Known Issue**: Custom categories are not restored when reopening the app after closing it, and will be lost. This bug will be addressed in a future update.
 
 The implementation is in `src/lib/storage.ts` and provides the following functionality:
 
