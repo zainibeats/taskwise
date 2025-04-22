@@ -63,10 +63,10 @@ const defaultTasks: Task[] = [
   },
 ];
 
-// Lazy load the TaskEditForm component
+// Lazy load the TaskEditForm component to optimize initial load time.
 const TaskEditForm = lazy(() => import('@/components/TaskEditForm').then(module => ({ default: module.TaskEditForm })));
 
-// Define a more specific type for initial icons
+// Default emoji icons for each built-in category. Used for display and selection.
 const initialCategoryIcons: { [key: string]: string } = {
   Work: "💼",
   Home: "🏠",
@@ -80,16 +80,22 @@ const initialCategoryIcons: { [key: string]: string } = {
   Other: "📌",
 };
 
+// Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
 export default function Home() {
+  // List of built-in categories (cannot be deleted by user)
   const builtInCategories = [
     "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
   ];
+
+  // State for the new task input field
   const [newTaskTitle, setNewTaskTitle] = useState("");
+
+  // Undo/Redo state and logic for task history
   const [history, setHistory] = useState<Task[][]>([defaultTasks]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const { toast } = useToast();
 
-  // Undo/Redo logic modularized
+  // Custom undo/redo hook for tasks
   const { tasks, canUndo, canRedo, pushHistory, handleUndo, handleRedo } = useUndoRedo<Task>({
     history,
     setHistory,
@@ -97,12 +103,16 @@ export default function Home() {
     setHistoryIndex,
     toast,
   });
+
+  // Loading state for async operations (AI, etc.)
   const [isLoading, setIsLoading] = useState(false);
+
+  // State for editing tasks, alert dialogs, and temporary task data
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [tempTask, setTempTask] = useState<Task | null>(null);
 
-  // Modularized task handlers
+  // All task-related actions (CRUD, completion, edit, discard) from custom hook
   const {
     handleTaskCompletion,
     handleSubtaskCompletion,
@@ -120,7 +130,7 @@ export default function Home() {
     toast
   });
 
-  // Category logic modularized
+  // All category-related state and actions (custom categories, emoji picker, etc.)
   const {
     customCategory, setCustomCategory,
     customCategoryEmoji, setCustomCategoryEmoji,
@@ -140,7 +150,7 @@ export default function Home() {
     pushHistory,
   });
 
-  // Date picker logic modularized
+  // Date picker state and logic from custom hook
   const {
     selectedDate, setSelectedDate, handleClearDate, isToday
   } = useDatePicker(new Date());
@@ -354,8 +364,11 @@ export default function Home() {
 </PopoverContent>
             </Popover>
 
-            {/* Manage Categories Modal */}
-            <AlertDialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
+            {/*
+            Manage Categories Modal
+            Allows the user to delete custom categories. Built-in categories are protected.
+          */}
+          <AlertDialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Manage Custom Categories</AlertDialogTitle>
@@ -394,6 +407,10 @@ export default function Home() {
               </AlertDialogContent>
             </AlertDialog>
 
+            {/*
+              Add Task Button: triggers task creation, disabled while loading
+              HistoryControls: Undo/Redo buttons for task list changes
+            */}
             <Button onClick={handleAddTask} disabled={isLoading}>
               {isLoading ? (
                 <Icons.loader className="mr-2 h-4 w-4 animate-spin" />
@@ -409,12 +426,18 @@ export default function Home() {
             />
           </div>
 
+          {/*
+            Task List
+            Renders all tasks with completion, editing, deletion, and subtask controls.
+            Each task card displays title, priority, category, description, deadline, and subtasks.
+          */}
           <ul className="space-y-2 mt-4">
             {tasks.map((task) => (
               <li key={task.id}>
                 <Card className="shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center space-x-2">
+                      {/* Task completion checkbox */}
                       <Checkbox
                         id={`task-${task.id}`}
                         checked={task.completed}
@@ -424,8 +447,10 @@ export default function Home() {
                           }
                         }}
                       />
+                      {/* Task title with strike-through if completed */}
                       <Label htmlFor={`task-${task.id}`} style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.5 : 1 }}>{task.title}</Label>
                     </div>
+                    {/* Priority and category badge */}
                     <Badge 
                       variant="outline"
                       className={cn(
@@ -437,6 +462,7 @@ export default function Home() {
                     </Badge>
                   </CardHeader>
                   <CardContent style={{ opacity: task.completed ? 0.5 : 1 }}>
+                    {/* Show edit form if editing this task */}
                     {editingTaskId === task.id ? (
                       <Suspense fallback={<div>Loading...</div>}>
                         <TaskEditForm
@@ -449,22 +475,26 @@ export default function Home() {
                       </Suspense>
                     ) : (
                       <>
+                        {/* Task description (if present) */}
                         {task.description && (
                           <p className="text-sm text-muted-foreground">
                             {task.description}
                           </p>
                         )}
+                        {/* Deadline (if present) */}
                         {task.deadline && (
                           <p className="text-sm text-muted-foreground">
                             Deadline: {task.deadline ? format(task.deadline, "PPP") : "No deadline"}
                           </p>
                         )}
+                        {/* Subtasks (if present) */}
                         {task.subtasks && task.subtasks.length > 0 && (
                           <div className="mt-2">
                             <h4 className="text-sm font-medium">Subtasks:</h4>
                             <ul className="list-disc pl-4">
                               {task.subtasks.map((subtask) => (
                                 <li key={subtask.id} className="text-xs flex items-center space-x-4">
+                                  {/* Subtask completion checkbox */}
                                   <Checkbox
                                     id={`subtask-${subtask.id}`}
                                     checked={subtask.completed}
@@ -474,12 +504,14 @@ export default function Home() {
                                       }
                                     }}
                                   />
+                                  {/* Subtask title with strike-through if completed */}
                                   <Label htmlFor={`subtask-${subtask.id}`}  style={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}>{subtask.title}</Label>
                                 </li>
                               ))}
                             </ul>
                           </div>
                         )}
+                        {/* Edit/Delete controls */}
                         <div className="flex justify-end space-x-2">
                           <Button onClick={() => handleEditTask(task)} disabled={task.completed}>Edit</Button>
                           <Button
@@ -498,6 +530,10 @@ export default function Home() {
           </ul>
         </CardContent>
       </Card>
+      {/*
+        Discard Changes Modal
+        Confirms with the user before discarding edits to a task.
+      */}
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -513,6 +549,10 @@ export default function Home() {
           <AlertDialogCancel onClick={cancelDiscard}>Cancel</AlertDialogCancel>
         </AlertDialogContent>
       </AlertDialog>
+      {/*
+        Create Category Modal
+        Allows the user to add a new custom category with an emoji icon.
+      */}
       <AlertDialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -545,6 +585,7 @@ export default function Home() {
                   value={customCategoryEmoji}
                   onChange={(e) => setCustomCategoryEmoji(e.target.value)}
                 />
+                {/* Emoji picker button and popover */}
                 <Button
                   variant="outline"
                   size="icon"
