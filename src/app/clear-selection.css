@@ -1,0 +1,11 @@
+.category-clear-btn {
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+.category-clear-btn:hover,
+.category-clear-btn:focus {
+  color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.08);
+}
