@@ -392,11 +392,15 @@ export default function Home() {
               onChange={(e) => setNewTaskTitle(e.target.value)}
               className="flex-grow"
             />
-            <Select onValueChange={handleCategorySelect} value={selectedCategory}>
+            <Select 
+              key={selectedCategory ?? 'no-selection'} 
+              onValueChange={handleCategorySelect} 
+              value={selectedCategory}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-56 overflow-y-auto">
                 {Object.entries(categoryIconsState).map(([category, icon]) => (
                   <SelectItem key={category} value={category}>
                     {icon} {category}
@@ -436,6 +440,15 @@ export default function Home() {
                 />
               </PopoverContent>
             </Popover>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSelectedCategory(undefined)}
+              disabled={!selectedCategory}
+              className="border border-gray-300"
+            >
+              Clear Selection
+            </Button>
             <Button onClick={handleAddTask} disabled={isLoading}>
               {isLoading ? (
                 <Icons.loader className="mr-2 h-4 w-4 animate-spin" />
