@@ -13,6 +13,7 @@ import {z} from 'genkit';
 
 const CategorizeTaskInputSchema = z.object({
   taskDescription: z.string().describe('The task description to be categorized.'),
+  categories: z.array(z.string()).optional().describe('A list of categories to choose from.'),
 });
 export type CategorizeTaskInput = z.infer<typeof CategorizeTaskInputSchema>;
 
@@ -30,6 +31,7 @@ const prompt = ai.definePrompt({
   input: {
     schema: z.object({
       taskDescription: z.string().describe('The task description to be categorized.'),
+      categories: z.array(z.string()).optional().describe('A list of categories to choose from.'),
     }),
   },
   output: {
@@ -37,7 +39,12 @@ const prompt = ai.definePrompt({
       category: z.string().describe('The category that best fits the task from the predefined list.'),
     }),
   },
-  prompt: `You are a task categorization expert. Given the task description, determine the most appropriate category for it from the following list: Health, Finance, Work, Personal, Errands, Other.
+  prompt: `You are a task categorization expert. Given the task description, determine the most appropriate category for it from the following list:
+{{#if categories}}
+  {{categories.join(", ")}}
+{{else}}
+  Health, Finance, Work, Personal, Errands, Other
+{{/if}}
 
 Task Description: {{{taskDescription}}}
 

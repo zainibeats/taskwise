@@ -169,6 +169,8 @@ export default function Home() {
 
     // Create initial task object
     let taskCategory = selectedCategory; // Use selected category if available
+    // Gather all categories (built-in + custom)
+    const allCategories = Object.keys(categoryIconsState);
     const newTask: Task = {
       id: Date.now().toString(),
       title: newTaskTitle,
@@ -182,14 +184,16 @@ export default function Home() {
     try {
       // --- AI Categorization (if needed) ---
       if (!taskCategory) {
-        const categoryResult = await categorizeTask({ taskDescription: newTask.title });
-        taskCategory = categoryResult.category; // Assign AI category
-        newTask.category = taskCategory; // Update task object
-        toast({ title: "AI Assigned Category", description: `Task assigned to: ${taskCategory}` });
+        // If no category selected, use AI to suggest one from all categories (built-in + custom)
+        const aiCategory = await categorizeTask({
+          taskDescription: newTask.title,
+          categories: allCategories,
+        });
+        newTask.category = aiCategory.category;
       }
 
       // Ensure we have a category for prioritization (default to "Other" if AI fails?)
-      const categoryForPrioritization = taskCategory || "Other";
+      const categoryForPrioritization = newTask.category || "Other";
 
       // --- AI Prioritization & Subtasks ---
       const [priorityResult, subtasksResult] = await Promise.all([
