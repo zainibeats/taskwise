@@ -27,7 +27,7 @@ export const HistoryControls: React.FC<HistoryControlsProps> = ({
         disabled={!canUndo}
         aria-label="Undo"
         className={cn(
-          "transition-opacity duration-300 ease-in-out",
+          "transition-opacity duration-300 ease-in-out category-green-btn",
           canUndo ? "opacity-100" : "opacity-0 pointer-events-none" 
         )}
       >
@@ -40,7 +40,7 @@ export const HistoryControls: React.FC<HistoryControlsProps> = ({
         disabled={!canRedo}
         aria-label="Redo"
         className={cn(
-          "transition-opacity duration-300 ease-in-out",
+          "transition-opacity duration-300 ease-in-out category-green-btn",
           canRedo ? "opacity-100" : "opacity-0 pointer-events-none" 
         )}
       >
