@@ -1,0 +1,37 @@
+.category-green-btn {
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--primary));
+}
+.category-green-btn:hover,
+.category-green-btn:focus {
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary) / 0.08);
+}
+
+/* For SelectTrigger green hover */
+.category-green-select .SelectTrigger:hover,
+.category-green-select .SelectTrigger:focus {
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary) / 0.08);
+}
+
+/* For SelectItem green hover (legacy) */
+.category-green-select .SelectItem:hover,
+.category-green-select .SelectItem:focus,
+.category-green-select .select__item:hover,
+.category-green-select .select__item:focus {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+  outline: 2px solid hsl(var(--primary));
+}
+
+/* Modern green effect for all category dropdown items */
+.category-green-item:hover,
+.category-green-item:focus {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+  outline: 2px solid hsl(var(--primary));
+}
