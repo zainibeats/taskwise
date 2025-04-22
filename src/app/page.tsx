@@ -89,6 +89,10 @@ const initialCategoryIcons: { [key: string]: string } = {
 };
 
 export default function Home() {
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const builtInCategories = [
+    "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
+  ];
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [history, setHistory] = useState<Task[][]>([defaultTasks]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
@@ -334,6 +338,24 @@ export default function Home() {
     }
   };
 
+  // Delete custom category and update tasks
+  const handleDeleteCategory = (categoryToDelete: string) => {
+    setCategoryIconsState(prevState => {
+      const newState = { ...prevState };
+      delete newState[categoryToDelete];
+      return newState;
+    });
+    // Update all tasks with this category to 'Uncategorized'
+    const updatedTasks = tasks.map(task =>
+      task.category === categoryToDelete
+        ? { ...task, category: "Uncategorized" }
+        : task
+    );
+    pushHistory(updatedTasks);
+    setSelectedCategory(undefined);
+  };
+
+
   const handleEmojiSelect = (emoji: string) => {
     setCustomCategoryEmoji(emoji);
     setIsEmojiPickerOpen(false); // Close the picker after selection
@@ -372,25 +394,37 @@ export default function Home() {
               onChange={(e) => setNewTaskTitle(e.target.value)}
               className="flex-grow"
             />
-            <Select 
-              key={selectedCategory ?? 'no-selection'} 
-              onValueChange={handleCategorySelect} 
-              value={selectedCategory}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent className="max-h-56 overflow-y-auto">
-                {Object.entries(categoryIconsState).map(([category, icon]) => (
-                  <SelectItem key={category} value={category}>
-                    {icon} {category}
+            <div className="flex items-center gap-1">
+              <Select 
+                key={selectedCategory ?? 'no-selection'} 
+                onValueChange={handleCategorySelect} 
+                value={selectedCategory}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="max-h-56 overflow-y-auto">
+                  {Object.entries(categoryIconsState).map(([category, icon]) => (
+                    <SelectItem key={category} value={category}>
+                      {icon} {category}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="create_new">
+                    Create New
                   </SelectItem>
-                ))}
-                <SelectItem value="create_new">
-                  Create New
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Manage Categories"
+                className="ml-1"
+                onClick={() => setIsManageCategoriesOpen(true)}
+              >
+                <Icons.settings className="h-5 w-5" />
+              </Button>
+            </div>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -438,6 +472,47 @@ export default function Home() {
             >
               Clear Selection
             </Button>
+
+            {/* Manage Categories Modal */}
+            <AlertDialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Manage Custom Categories</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Delete any custom category you no longer need. Built-in categories cannot be deleted.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mt-2">
+                  {Object.entries(categoryIconsState)
+                    .filter(([cat]) => !builtInCategories.includes(cat))
+                    .length === 0 && (
+                      <span className="text-muted-foreground text-sm">No custom categories found.</span>
+                    )}
+                  {Object.entries(categoryIconsState)
+                    .filter(([cat]) => !builtInCategories.includes(cat))
+                    .map(([category, icon]) => (
+                      <div key={category} className="flex items-center justify-between p-2 rounded hover:bg-muted">
+                        <span className="flex items-center gap-2">{icon} {category}</span>
+                        <AlertDialogAction
+                          asChild
+                        >
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            aria-label={`Delete ${category}`}
+                            onClick={() => handleDeleteCategory(category)}
+                          >
+                            <Icons.trash className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogAction>
+                      </div>
+                    ))}
+                </div>
+                <AlertDialogCancel className="mt-4">Close</AlertDialogCancel>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <Button onClick={handleAddTask} disabled={isLoading}>
               {isLoading ? (
                 <Icons.loader className="mr-2 h-4 w-4 animate-spin" />
