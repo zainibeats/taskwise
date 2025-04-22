@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, lazy, Suspense, useRef } from "react";
+import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
+import { getStoredTasks, saveTasks, getStoredCategoryIcons, saveCategoryIcons } from "@/lib/storage";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
 import { useCategoryActions } from "./hooks/useCategoryActions";
@@ -41,6 +42,7 @@ import Image from 'next/image'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToastAction } from "@/components/ui/toast"
 import { HistoryControls } from "@/components/history-controls";
+import { clearAllData } from "@/lib/storage";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 
@@ -93,22 +95,47 @@ export default function Home() {
   // Undo/Redo state and logic for task history
 // history: stores snapshots of task lists for undo/redo
 // historyIndex: current position in history stack
-  const [history, setHistory] = useState<Task[][]>([defaultTasks]);
+  const [history, setHistory] = useState<Task[][]>([defaultTasks]); // Start with defaultTasks to prevent undefined
   const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state to handle initialization period
   const { toast } = useToast();
+  
+  // Initialize tasks from localStorage or use default tasks
+  useEffect(() => {
+    const storedTasks = getStoredTasks();
+    if (storedTasks && storedTasks.length > 0) {
+      setHistory([storedTasks]);
+      setHistoryIndex(0);
+      toast({ title: "Tasks loaded from localStorage" });
+    }
+    setIsLoading(false); // Mark loading as complete regardless of outcome
+  }, []);
 
   // Custom undo/redo hook for tasks
 // Provides tasks, canUndo/canRedo, and history manipulation functions
-  const { tasks, canUndo, canRedo, pushHistory, handleUndo, handleRedo } = useUndoRedo<Task>({
+  const {
+    tasks,
+    canUndo,
+    canRedo,
+    pushHistory: originalPushHistory,
+    handleUndo,
+    handleRedo,
+  } = useUndoRedo<Task>({
     history,
     setHistory,
     historyIndex,
     setHistoryIndex,
     toast,
   });
+  
+  // Wrap pushHistory to also save to localStorage
+  const pushHistory = (newTasksState: Task[]) => {
+    originalPushHistory(newTasksState);
+    saveTasks(newTasksState);
+  };
 
-  // Loading state for async operations (AI, etc.)
-  const [isLoading, setIsLoading] = useState(false);
+  // Loading state for AI operations (separate from initial data loading)
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   // State for editing tasks, alert dialogs, and temporary task data
 // editingTaskId: which task is being edited
@@ -139,6 +166,19 @@ export default function Home() {
 
   // All category-related state and actions (custom categories, emoji picker, etc.)
 // Manages custom categories, emoji selection, category creation/deletion, and related UI state
+  // Load stored category icons
+  const [loadedCategoryIcons, setLoadedCategoryIcons] = useState(initialCategoryIcons);
+  
+  useEffect(() => {
+    const storedCategoryIcons = getStoredCategoryIcons();
+    if (storedCategoryIcons) {
+      setLoadedCategoryIcons({
+        ...initialCategoryIcons,
+        ...storedCategoryIcons
+      });
+    }
+  }, []);
+
   const {
     customCategory, setCustomCategory,
     customCategoryEmoji, setCustomCategoryEmoji,
@@ -147,16 +187,39 @@ export default function Home() {
     categoryIconsState, setCategoryIconsState,
     selectedCategory, setSelectedCategory,
     isManageCategoriesOpen, setIsManageCategoriesOpen,
-    handleCreateCategory,
-    handleDeleteCategory,
+    handleCreateCategory: originalHandleCreateCategory,
+    handleDeleteCategory: originalHandleDeleteCategory,
     handleEmojiSelect,
     handleCategorySelect,
   } = useCategoryActions({
-    initialCategoryIcons,
+    initialCategoryIcons: loadedCategoryIcons,
     builtInCategories,
     tasks,
     pushHistory,
   });
+  
+  // Wrap category handlers to save to localStorage
+  const handleCreateCategory = () => {
+    if (customCategory && customCategoryEmoji) {
+      originalHandleCreateCategory(customCategory, customCategoryEmoji);
+      const updatedIcons = { ...categoryIconsState, [customCategory]: customCategoryEmoji };
+      saveCategoryIcons(updatedIcons);
+    }
+  };
+  
+  const handleDeleteCategory = (category: string) => {
+    originalHandleDeleteCategory(category);
+    const updatedIcons = { ...categoryIconsState };
+    delete updatedIcons[category];
+    saveCategoryIcons(updatedIcons);
+  };
+  
+  // Save category icons when they change
+  useEffect(() => {
+    if (Object.keys(categoryIconsState).length > 0) {
+      saveCategoryIcons(categoryIconsState);
+    }
+  }, [categoryIconsState]);
 
   // Date picker state and logic from custom hook
 // Handles selected date, clearing, and today check
@@ -168,7 +231,7 @@ export default function Home() {
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
 
-    setIsLoading(true);
+    setIsAiLoading(true);
 
     // Create initial task object for new task entry
     let taskCategory = selectedCategory; // Use selected category if available
@@ -240,7 +303,7 @@ export default function Home() {
         description: "Failed to process task. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setIsAiLoading(false);
     }
   };
 
@@ -271,8 +334,33 @@ export default function Home() {
   // (date picker logic moved to useDatePicker)
 
 
+  // State for delete confirmation dialog
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // Handler to clear all data
+  const handleClearAllData = () => {
+    clearAllData();
+    setHistory([defaultTasks]);
+    setHistoryIndex(0);
+    setCategoryIconsState(initialCategoryIcons);
+    toast({ title: "All TaskWise data deleted" });
+    setShowDeleteDialog(false);
+  };
+
   return (
     <div className="container mx-auto p-4">
+      {/* Header row with theme toggle and trashcan icon */}
+      <div className="flex justify-end items-center mb-2 gap-2">
+        {/* Theme toggle icon goes here (assumed to be in your layout/header, add below if needed) */}
+        {/* Trashcan icon for clearing local storage */}
+        <button
+          className="p-2 rounded hover:bg-destructive/20 text-destructive"
+          title="Delete all TaskWise data"
+          onClick={() => setShowDeleteDialog(true)}
+          aria-label="Delete all data"
+        >
+          <Icons.trash className="h-5 w-5" />
+        </button>
+      </div>
       <Card>
         <CardHeader className="flex flex-col items-center text-center">
           <Image
@@ -289,12 +377,17 @@ export default function Home() {
         <CardContent>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Input
-              type="text"
-              placeholder="Add a task..."
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="flex-grow"
-            />
+  type="text"
+  placeholder="Add a task..."
+  value={newTaskTitle}
+  onChange={(e) => setNewTaskTitle(e.target.value)}
+  className="flex-grow"
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && !isLoading && !isAiLoading) {
+      handleAddTask();
+    }
+  }}
+/>
             <div className="flex items-center gap-1">
               <div className="category-green-select">
                 <Select 
@@ -423,8 +516,8 @@ export default function Home() {
               Add Task Button: triggers task creation, disabled while loading
               HistoryControls: Undo/Redo buttons for task list changes
             */}
-            <Button onClick={handleAddTask} disabled={isLoading}>
-              {isLoading ? (
+            <Button onClick={handleAddTask} disabled={isLoading || isAiLoading}>
+              {(isLoading || isAiLoading) ? (
                 <Icons.loader className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 "Add Task"
@@ -444,108 +537,121 @@ export default function Home() {
             Each task card displays title, priority, category, description, deadline, and subtasks.
           */}
           <ul className="space-y-2 mt-4">
-            {tasks.map((task) => (
-              <li key={task.id}>
-                <Card className="shadow-sm">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center space-x-2">
-                      {/* Task completion checkbox */}
-                      <Checkbox
-                        id={`task-${task.id}`}
-                        checked={task.completed}
-                        onCheckedChange={(checked) => {
-                          if (typeof checked === 'boolean') {
-                            handleTaskCompletion(task.id, checked);
-                          }
-                        }}
-                      />
-                      {/* Task title with strike-through if completed */}
-                      <Label htmlFor={`task-${task.id}`} style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.5 : 1 }}>{task.title}</Label>
-                    </div>
-                    {/* Priority and category badge */}
-                    <Badge 
-                      variant="outline"
-                      className={cn(
-                        "border-2",
-                        getPriorityBorderClass(task.priority)
-                      )}
-                    >
-                      {task.category ? `${categoryIconsState[task.category as keyof typeof categoryIconsState]} ${task.category}`: "No Category"} - Priority: {task.priority}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent style={{ opacity: task.completed ? 0.5 : 1 }}>
-                    {/* Show edit form if editing this task */}
-                    {editingTaskId === task.id ? (
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <TaskEditForm
-                          task={task}
-                          onUpdate={(updatedTask) => handleUpdateTask(task.id, updatedTask)}
-                          onCancel={() => setEditingTaskId(null)}
-                          categoryIcons={categoryIconsState} // Pass the category icons
-                          setCategoryIcons={setCategoryIconsState}
+            {isLoading ? (
+              // Show loading placeholder while data is being loaded
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="ml-2">Loading tasks...</span>
+              </div>
+            ) : tasks && tasks.length > 0 ? (
+              tasks.map((task) => (
+                <li key={task.id}>
+                  <Card className="shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <div className="flex items-center space-x-2">
+                        {/* Task completion checkbox */}
+                        <Checkbox
+                          id={`task-${task.id}`}
+                          checked={task.completed}
+                          onCheckedChange={(checked) => {
+                            if (typeof checked === 'boolean') {
+                              handleTaskCompletion(task.id, checked);
+                            }
+                          }}
                         />
-                      </Suspense>
-                    ) : (
-                      <>
-                        {/* Task description (if present) */}
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {task.description}
-                          </p>
+                        {/* Task title with strike-through if completed */}
+                        <Label htmlFor={`task-${task.id}`} style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.5 : 1 }}>{task.title}</Label>
+                      </div>
+                      {/* Priority and category badge */}
+                      <Badge 
+                        variant="outline"
+                        className={cn(
+                          "border-2",
+                          getPriorityBorderClass(task.priority)
                         )}
-                        {/* Deadline (if present) */}
-                        {task.deadline && (
-                          <p className="text-sm text-muted-foreground">
-                            Deadline: {task.deadline ? format(task.deadline, "PPP") : "No deadline"}
-                          </p>
-                        )}
-                        {/* Subtasks (if present) */}
-                        {task.subtasks && task.subtasks.length > 0 && (
-                          <div className="mt-2">
-                            <h4 className="text-sm font-medium">Subtasks:</h4>
-                            <ul className="list-disc pl-4">
-                              {task.subtasks.map((subtask) => (
-                                <li key={subtask.id} className="text-xs flex items-center space-x-4">
-                                  {/* Subtask completion checkbox */}
-                                  <Checkbox
-                                    id={`subtask-${subtask.id}`}
-                                    checked={subtask.completed}
-                                    onCheckedChange={(checked) => {
-                                      if (typeof checked === 'boolean') {
-                                        handleSubtaskCompletion(task.id, subtask.id, checked);
-                                      }
-                                    }}
-                                  />
-                                  {/* Subtask title with strike-through if completed */}
-                                  <Label htmlFor={`subtask-${subtask.id}`}  style={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}>{subtask.title}</Label>
-                                </li>
-                              ))}
-                            </ul>
+                      >
+                        {task.category ? `${categoryIconsState[task.category as keyof typeof categoryIconsState]} ${task.category}`: "No Category"} - Priority: {task.priority}
+                      </Badge>
+                    </CardHeader>
+                    <CardContent style={{ opacity: task.completed ? 0.5 : 1 }}>
+                      {/* Show edit form if editing this task */}
+                      {editingTaskId === task.id ? (
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <TaskEditForm
+                            task={task}
+                            onUpdate={(updatedTask) => handleUpdateTask(task.id, updatedTask)}
+                            onCancel={() => setEditingTaskId(null)}
+                            categoryIcons={categoryIconsState} // Pass the category icons
+                            setCategoryIcons={setCategoryIconsState}
+                          />
+                        </Suspense>
+                      ) : (
+                        <>
+                          {/* Task description (if present) */}
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {task.description}
+                            </p>
+                          )}
+                          {/* Deadline (if present) */}
+                          {task.deadline && (
+                            <p className="text-sm text-muted-foreground">
+                              Deadline: {task.deadline ? format(task.deadline, "PPP") : "No deadline"}
+                            </p>
+                          )}
+                          {/* Subtasks (if present) */}
+                          {task.subtasks && task.subtasks.length > 0 && (
+                            <div className="mt-2">
+                              <h4 className="text-sm font-medium">Subtasks:</h4>
+                              <ul className="list-disc pl-4">
+                                {task.subtasks.map((subtask) => (
+                                  <li key={subtask.id} className="text-xs flex items-center space-x-4">
+                                    {/* Subtask completion checkbox */}
+                                    <Checkbox
+                                      id={`subtask-${subtask.id}`}
+                                      checked={subtask.completed}
+                                      onCheckedChange={(checked) => {
+                                        if (typeof checked === 'boolean') {
+                                          handleSubtaskCompletion(task.id, subtask.id, checked);
+                                        }
+                                      }}
+                                    />
+                                    {/* Subtask title with strike-through if completed */}
+                                    <Label htmlFor={`subtask-${subtask.id}`}  style={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}>{subtask.title}</Label>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {/* Edit/Delete controls */}
+                          <div className="flex justify-end space-x-2">
+                            <Button onClick={() => handleEditTask(task)} disabled={task.completed}>Edit</Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => handleDeleteTask(task.id)}
+                            >
+                              Delete
+                            </Button>
                           </div>
-                        )}
-                        {/* Edit/Delete controls */}
-                        <div className="flex justify-end space-x-2">
-                          <Button onClick={() => handleEditTask(task)} disabled={task.completed}>Edit</Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleDeleteTask(task.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </li>
+              ))
+            ) : (
+              // Show message when no tasks are available
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No tasks yet. Create your first task above!</p>
+              </div>
+            )}
           </ul>
         </CardContent>
       </Card>
       {/*
         Discard Changes Modal
         Confirms with the user before discarding edits to a task.
-      */}
+{{ ... }} (rest of the code remains the same)
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -620,6 +726,21 @@ export default function Home() {
             }} className="category-clear-btn">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleCreateCategory}>Create</AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all TaskWise data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all your tasks, categories, and settings from this browser. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/80" onClick={handleClearAllData}>
+            Yes, delete everything
+          </AlertDialogAction>
+          <AlertDialogCancel className="category-clear-btn">Cancel</AlertDialogCancel>
         </AlertDialogContent>
       </AlertDialog>
     </div>

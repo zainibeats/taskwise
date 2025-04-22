@@ -143,25 +143,36 @@ Implement components to:
 
 ## 5. Database Setup
 
-### Local Development
+### Local Storage Implementation
 
-For local development, use either:
-- **Local Storage**: Simple client-side storage
-- **JSON Server**: Simple REST API with a JSON file as database
-- **SQLite**: Lightweight file-based database
+For data persistence, TaskWise uses browser localStorage, providing several benefits:
 
-### Production
+1. **Privacy**: All user data stays on their device, not on any server
+2. **Simplicity**: No database setup required for self-hosting
+3. **Offline Use**: Application remains functional without internet connection
 
-For production, implement:
-1. **Vercel Postgres**: Serverless SQL database
+The implementation is in `src/lib/storage.ts` and provides the following functionality:
+
+```typescript
+// Key localStorage functions
+getStoredTasks(): Task[] | null        // Retrieve tasks from storage
+saveTasks(tasks: Task[]): boolean      // Save tasks to storage
+getStoredCategoryIcons(): object | null // Retrieve categories and icons
+saveCategoryIcons(icons: object): boolean // Save categories and icons
+clearAllData(): boolean                // Clear all application data
+```
+
+### Future Database Support (Optional)
+
+If server-side persistence is desired in the future, the storage layer is designed to be extensible. Options to consider:
+
+1. **Vercel Postgres**: For deployment to Vercel
    ```bash
    npm install @vercel/postgres
    ```
-
-2. **Database Schema**:
-   ```sql
-   CREATE TABLE tasks (
-     id SERIAL PRIMARY KEY,
+2. **SQLite**: For local development or simple self-hosting
+   ```bash
+   npm install better-sqlite3
      title TEXT NOT NULL,
      description TEXT,
      deadline DATE,
