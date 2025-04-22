@@ -12,6 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+/**
+ * ModeToggle component allows users to switch between different themes (light, dark, system).
+ * It utilizes a dropdown menu to present the theme options and triggers the theme change 
+ * using the setTheme function from the useTheme hook.
+ *
+ * @returns {JSX.Element} The rendered dropdown menu for theme selection.
+ */
 export function ModeToggle() {
   const { setTheme } = useTheme()
 
