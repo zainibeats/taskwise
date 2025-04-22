@@ -60,19 +60,25 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
   );
 };
 
+/**
+ * TaskEditForm component allows editing of a task's details, including title, description,
+ * category (with emoji), priority, and deadline. Also supports creating new categories with emoji.
+ */
 export function TaskEditForm({ task, onUpdate, onCancel, categoryIcons, setCategoryIcons }: TaskEditFormProps) {
-  const [title, setTitle] = useState(task.title);
-  const [description, setDescription] = useState(task.description || "");
-  const [category, setCategory] = useState(task.category || "");
-  const [priority, setPriority] = useState(task.priority || 50);
-  const [deadline, setDeadline] = useState<Date | undefined>(task.deadline);
-  const [customCategory, setCustomCategory] = useState("");
-  const [customCategoryEmoji, setCustomCategoryEmoji] = useState("");
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
+  // Local state for each editable field
+const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description || ""); // Task description
+  const [category, setCategory] = useState(task.category || ""); // Task category
+  const [priority, setPriority] = useState(task.priority || 50); // Task priority (default 50)
+  const [deadline, setDeadline] = useState<Date | undefined>(task.deadline); // Task deadline
+  const [customCategory, setCustomCategory] = useState(""); // New category name input
+  const [customCategoryEmoji, setCustomCategoryEmoji] = useState(""); // Emoji for new category
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false); // Emoji picker visibility
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false); // New category creation dialog
 
 
-  const handleSave = () => {
+  // Save changes and propagate updated task details
+const handleSave = () => {
     onUpdate({
       title,
       description,
@@ -82,7 +88,8 @@ export function TaskEditForm({ task, onUpdate, onCancel, categoryIcons, setCateg
     });
   };
 
-  const handleCreateCategory = () => {
+  // Create a new category with selected emoji and set as current
+const handleCreateCategory = () => {
     if (customCategory.trim() && customCategoryEmoji.trim()) {
       setCategoryIcons(prevState => ({
         ...prevState,
@@ -95,12 +102,14 @@ export function TaskEditForm({ task, onUpdate, onCancel, categoryIcons, setCateg
     }
   };
 
-    const handleEmojiSelect = (emoji: string) => {
+    // Handle emoji selection for new category
+const handleEmojiSelect = (emoji: string) => {
       setCustomCategoryEmoji(emoji);
       setIsEmojiPickerOpen(false); // Close the picker after selection
     };
 
-  const handleCategorySelect = (value: string | undefined) => {
+  // Handle category dropdown selection (including new category option)
+const handleCategorySelect = (value: string | undefined) => {
     if (value === 'create_new') {
       setIsCreateCategoryOpen(true);
     } else {
