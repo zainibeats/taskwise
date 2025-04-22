@@ -420,6 +420,15 @@ export default function Home() {
               </Select>
               <Button
                 type="button"
+                variant="outline"
+                onClick={() => setSelectedCategory(undefined)}
+                disabled={!selectedCategory}
+                className="border border-gray-300"
+              >
+                Clear Selection
+              </Button>
+              <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 aria-label="Manage Categories"
@@ -467,15 +476,6 @@ export default function Home() {
   </div>
 </PopoverContent>
             </Popover>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setSelectedCategory(undefined)}
-              disabled={!selectedCategory}
-              className="border border-gray-300"
-            >
-              Clear Selection
-            </Button>
 
             {/* Manage Categories Modal */}
             <AlertDialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
