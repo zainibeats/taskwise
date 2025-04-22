@@ -59,7 +59,8 @@ const defaultTasks: Task[] = [
     deadline: new Date("2025-08-1"),
     subtasks: [
       { id: "1a", title: "Explore categories", completed: false },
-      { id: "1b", title: "Explore subtasks auto-generation", completed: false },
+      { id: "1b", title: "Create custom category", completed: false },
+      { id: "1c", title: "Explore subtasks auto-generation", completed: false },
     ],
     completed: false,
   },
@@ -334,33 +335,12 @@ export default function Home() {
   // (date picker logic moved to useDatePicker)
 
 
-  // State for delete confirmation dialog
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  // Handler to clear all data
-  const handleClearAllData = () => {
-    clearAllData();
-    setHistory([defaultTasks]);
-    setHistoryIndex(0);
-    setCategoryIconsState(initialCategoryIcons);
-    toast({ title: "All TaskWise data deleted" });
-    setShowDeleteDialog(false);
-  };
+  
 
   return (
     <div className="container mx-auto p-4">
-      {/* Header row with theme toggle and trashcan icon */}
-      <div className="flex justify-end items-center mb-2 gap-2">
-        {/* Theme toggle icon goes here (assumed to be in your layout/header, add below if needed) */}
-        {/* Trashcan icon for clearing local storage */}
-        <button
-          className="p-2 rounded hover:bg-destructive/20 text-destructive"
-          title="Delete all TaskWise data"
-          onClick={() => setShowDeleteDialog(true)}
-          aria-label="Delete all data"
-        >
-          <Icons.trash className="h-5 w-5" />
-        </button>
-      </div>
+      {/* Header row with theme toggle removed; trashcan now in layout */}
+      <div className="mb-2" />
       <Card>
         <CardHeader className="flex flex-col items-center text-center">
           <Image
@@ -728,21 +708,8 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete all TaskWise data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete all your tasks, categories, and settings from this browser. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/80" onClick={handleClearAllData}>
-            Yes, delete everything
-          </AlertDialogAction>
-          <AlertDialogCancel className="category-clear-btn">Cancel</AlertDialogCancel>
-        </AlertDialogContent>
-      </AlertDialog>
+
+
     </div>
   );
 }
