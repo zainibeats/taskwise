@@ -88,7 +88,7 @@ The prioritization algorithm will be refined to:
 - Modulate the impact of the deadline based on the task category, preventing less important categories (e.g., "Personal") from receiving excessively high priorities simply due to imminent deadlines.
 - Ensure scores remain within the 1-100 range, providing a meaningful distribution even for tasks due soon.
 
-*Status: [✅ Done, Needs Refinement]*
+*Status: [✅ Done]*
 
 ### Subtask Generation
 
@@ -97,13 +97,19 @@ Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](fi
 - Use AI to generate relevant subtasks that help complete the main task
 - Return an array of subtask descriptions
 
-*Status: [✅ Implemented, Adjusted for fewer/broader subtasks]*
+*Status: [✅ Done]*
 
 ### Task Categorization
 
 Implement the automatic categorization flow in `src/ai/flows/categorize-task.ts`:
 
 *Status: [✅ Done]*
+
+---
+
+## Next Step: Local Storage Persistence
+
+Implement local storage persistence so that users' to-do lists are saved in their browser and restored when they return to the app. This will provide a seamless experience before moving on to more advanced database solutions.
 
 ## 4. User Interface Implementation [🚧 In Progress]
 
