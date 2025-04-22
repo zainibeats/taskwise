@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, lazy, Suspense, useEffect, useCallback, useRef, Dispatch, SetStateAction } from "react";
+import React, { useState, lazy, Suspense, useRef } from "react";
+import { useUndoRedo } from "./hooks/useUndoRedo";
 import {
   Card,
   CardContent,
@@ -99,12 +100,21 @@ export default function Home() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [history, setHistory] = useState<Task[][]>([defaultTasks]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const { toast } = useToast();
+
+  // Undo/Redo logic modularized
+  const { tasks, canUndo, canRedo, pushHistory, handleUndo, handleRedo } = useUndoRedo<Task>({
+    history,
+    setHistory,
+    historyIndex,
+    setHistoryIndex,
+    toast,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [tempTask, setTempTask] = useState<Task | null>(null);
-  const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [customCategory, setCustomCategory] = useState("");
   const [customCategoryEmoji, setCustomCategoryEmoji] = useState("");
@@ -112,58 +122,6 @@ export default function Home() {
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [categoryIconsState, setCategoryIconsState]: [ { [key: string]: string }, Dispatch<SetStateAction<{ [key: string]: string }>> ] = useState(initialCategoryIcons);
 
-  // Derive current tasks from history
-  const tasks = history[historyIndex];
-
-  // Calculate canUndo/canRedo
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
-
-  // Helper to push state to history
-  const pushHistory = useCallback((newTasksState: Task[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    setHistory([...newHistory, newTasksState]);
-    setHistoryIndex(newHistory.length);
-  }, [history, historyIndex]); // Add dependencies
-
-  // --- Undo/Redo Handlers ---
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      toast({ title: "Undo performed" });
-    }
-  }, [historyIndex, toast]); // Add dependencies
-
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      toast({ title: "Redo performed" });
-    }
-  }, [historyIndex, history.length, toast]); // Add dependencies
-
-  // --- Keyboard Shortcut Effect ---
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Redo: Ctrl+Shift+Z (or Cmd+Shift+Z)
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'z' || event.key === 'Z')) {
-        if (canRedo) {
-          event.preventDefault();
-          handleRedo();
-        }
-        return;
-      }
-      // Undo: Ctrl+Z (or Cmd+Z) without Shift
-      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'z' || event.key === 'Z')) {
-        if (canUndo) {
-          event.preventDefault();
-          handleUndo();
-        }
-        return;
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => { window.removeEventListener('keydown', handleKeyDown); };
-  }, [handleUndo, handleRedo]); // Depend on the stable handlers
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
