@@ -87,15 +87,18 @@ export default function Home() {
     "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
   ];
 
-  // State for the new task input field
+  // State for the new task input field (user input for new task title)
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
   // Undo/Redo state and logic for task history
+// history: stores snapshots of task lists for undo/redo
+// historyIndex: current position in history stack
   const [history, setHistory] = useState<Task[][]>([defaultTasks]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const { toast } = useToast();
 
   // Custom undo/redo hook for tasks
+// Provides tasks, canUndo/canRedo, and history manipulation functions
   const { tasks, canUndo, canRedo, pushHistory, handleUndo, handleRedo } = useUndoRedo<Task>({
     history,
     setHistory,
@@ -108,11 +111,15 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
 
   // State for editing tasks, alert dialogs, and temporary task data
+// editingTaskId: which task is being edited
+// isAlertOpen: controls alert dialog visibility
+// tempTask: holds a task being temporarily modified or confirmed for deletion
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [tempTask, setTempTask] = useState<Task | null>(null);
 
   // All task-related actions (CRUD, completion, edit, discard) from custom hook
+// Provides handlers for task completion, editing, deletion, and discard confirmation/cancellation
   const {
     handleTaskCompletion,
     handleSubtaskCompletion,
@@ -131,6 +138,7 @@ export default function Home() {
   });
 
   // All category-related state and actions (custom categories, emoji picker, etc.)
+// Manages custom categories, emoji selection, category creation/deletion, and related UI state
   const {
     customCategory, setCustomCategory,
     customCategoryEmoji, setCustomCategoryEmoji,
@@ -151,6 +159,7 @@ export default function Home() {
   });
 
   // Date picker state and logic from custom hook
+// Handles selected date, clearing, and today check
   const {
     selectedDate, setSelectedDate, handleClearDate, isToday
   } = useDatePicker(new Date());
@@ -161,7 +170,7 @@ export default function Home() {
 
     setIsLoading(true);
 
-    // Create initial task object
+    // Create initial task object for new task entry
     let taskCategory = selectedCategory; // Use selected category if available
     // Gather all categories (built-in + custom)
     const allCategories = Object.keys(categoryIconsState);
@@ -186,10 +195,11 @@ export default function Home() {
         newTask.category = aiCategory.category;
       }
 
-      // Ensure we have a category for prioritization (default to "Other" if AI fails?)
+      // Ensure we have a category for prioritization (default to "Other" if AI fails)
       const categoryForPrioritization = newTask.category || "Other";
 
       // --- AI Prioritization & Subtasks ---
+// Run AI flows for priority score and subtask suggestions in parallel
       const [priorityResult, subtasksResult] = await Promise.all([
         prioritizeTask({
           task: newTask.title,
@@ -202,7 +212,7 @@ export default function Home() {
         })
       ]);
 
-      // Update task with AI results
+      // Update task with AI results (priority and subtasks)
       newTask.priority = priorityResult.priorityScore;
       newTask.subtasks = subtasksResult.subtasks.map((subtaskTitle, index) => ({
         id: `${newTask.id}-subtask-${index}`,
@@ -210,10 +220,10 @@ export default function Home() {
         completed: false,
       }));
 
-      // Add task to state and history
+      // Add task to state and history (using pushHistory for undo/redo support)
       pushHistory([...tasks, newTask]); // Use pushHistory
 
-      // Reset form
+      // Reset form inputs for next task entry
       setNewTaskTitle("");
       setSelectedDate(new Date());
       setSelectedCategory(undefined);
@@ -236,6 +246,7 @@ export default function Home() {
 
 
   // Function to determine border color class based on priority
+// Returns a CSS class for border color based on priority score
   function getPriorityBorderClass(priority: number | undefined): string {
     if (!priority || priority <= 50) return "border-accent"; // Low priority (<= 50) -> Green (Accent)
     if (priority <= 75) return "border-warning"; // Medium priority (> 50 and <= 75) -> Yellow (Warning)
@@ -256,6 +267,7 @@ export default function Home() {
   ];
 
   // (category and emoji logic moved to useCategoryActions)
+// (date picker logic moved to useDatePicker)
   // (date picker logic moved to useDatePicker)
 
 
@@ -625,15 +637,21 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
     <div className="absolute z-10 bg-popover text-popover-foreground shadow-md rounded-md p-2 w-64">
        <ScrollArea className="h-[200px] w-full rounded-md border">
           <div className="grid grid-cols-5 gap-2">
-            {emojis.map((emoji) => (
-              <button
-                key={emoji}
-                className="text-2xl hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
-                onClick={() => onEmojiSelect(emoji)}
-              >
-                {emoji}
-              </button>
-            ))}
+            {emojis.map(/**
+ * Renders a button for selecting an emoji.
+ *
+ * @param {string} emoji - The emoji to be displayed on the button.
+ * @returns {JSX.Element} A button element that triggers the onEmojiSelect function when clicked.
+ */
+(emoji) => (
+  <button
+    key={emoji}
+    className="text-2xl hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+    onClick={() => onEmojiSelect(emoji)}
+  >
+    {emoji}
+  </button>
+))}
           </div>
       </ScrollArea>
       <Button variant="ghost" className="w-full mt-2" onClick={onClose}>
