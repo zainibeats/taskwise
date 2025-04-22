@@ -61,7 +61,7 @@ const defaultTasks: Task[] = [
     title: "Explore TaskWise features",
     description: "Get acquainted with TaskWise's capabilities",
     category: "Other",
-    priority: 75,
+    priority: 50,
     deadline: new Date("2025-08-1"),
     subtasks: [
       { id: "1a", title: "Explore categories", completed: false },
@@ -320,19 +320,6 @@ export default function Home() {
     "Travel",
     "Other",
   ];
-
-  const categoryIcons = {
-    Work: "💼",
-    Home: "🏠",
-    Errands: "🏃‍♂️",
-    Personal: "👤",
-    Health: "⚕️",
-    Finance: "💰",
-    Education: "📚",
-    Social: "🫂",
-    Travel: "✈️",
-    Other: "📌",
-  };
 
   const handleCreateCategory = () => {
     if (customCategory.trim() && customCategoryEmoji.trim()) {
