@@ -2,6 +2,7 @@
 
 import React, { useState, lazy, Suspense, useRef } from "react";
 import { useUndoRedo } from "./hooks/useUndoRedo";
+import { useTaskActions } from "./hooks/useTaskActions";
 import {
   Card,
   CardContent,
@@ -42,22 +43,7 @@ import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 
 
-interface Subtask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  priority?: number;
-  deadline?: Date | undefined;
-  subtasks?: Subtask[];
-  completed: boolean;
-}
+import type { Task, Subtask } from "./types/task";
 
 const defaultTasks: Task[] = [
   {
@@ -116,6 +102,24 @@ export default function Home() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [tempTask, setTempTask] = useState<Task | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+
+  // Modularized task handlers
+  const {
+    handleTaskCompletion,
+    handleSubtaskCompletion,
+    handleUpdateTask,
+    handleDeleteTask,
+    handleEditTask,
+    confirmDiscard,
+    cancelDiscard
+  } = useTaskActions({
+    tasks,
+    pushHistory,
+    setEditingTaskId,
+    setIsAlertOpen,
+    setTempTask,
+    toast
+  });
   const [customCategory, setCustomCategory] = useState("");
   const [customCategoryEmoji, setCustomCategoryEmoji] = useState("");
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -201,74 +205,6 @@ export default function Home() {
     }
   };
 
-  const handleTaskCompletion = (id: string, completed: boolean) => {
-    const updatedTasks = tasks.map((task) => {
-      if (task.id === id) {
-        const updatedTask = { ...task, completed: completed };
-        if (updatedTask.subtasks) {
-          updatedTask.subtasks = updatedTask.subtasks.map(subtask => ({
-            ...subtask,
-            completed: completed,
-          }));
-        }
-        return updatedTask;
-      }
-      return task;
-    });
-    pushHistory(updatedTasks); // Use pushHistory
-    // Remove toast with undo action
-    toast({ title: completed ? "Task marked complete" : "Task marked incomplete" });
-  };
-
-  const handleSubtaskCompletion = (taskId: string, subtaskId: string, completed: boolean) => {
-    const updatedTasks = tasks.map((task) => {
-      if (task.id === taskId) {
-        return {
-          ...task,
-          subtasks: task.subtasks?.map((subtask) =>
-            subtask.id === subtaskId ? { ...subtask, completed: completed } : subtask
-          ),
-        };
-      }
-      return task;
-    });
-    pushHistory(updatedTasks); // Use pushHistory
-  };
-
-  const handleUpdateTask = (id: string, updatedTaskPartial: Partial<Task>) => {
-    const updatedTasks = tasks.map((task) =>
-      task.id === id ? { ...task, ...updatedTaskPartial } : task
-    );
-    pushHistory(updatedTasks); // Use pushHistory
-    setEditingTaskId(null);
-    toast({ title: "Task updated" });
-  };
-
-  const handleDeleteTask = (id: string) => {
-    const updatedTasks = tasks.filter((task) => task.id !== id);
-    pushHistory(updatedTasks); // Use pushHistory
-    toast({ title: "Task deleted" });
-  };
-
-  const handleEditTask = (task: Task) => {
-    if (editingTaskId) {
-      setIsAlertOpen(true);
-      setTempTask(task);
-    } else {
-      setEditingTaskId(task.id);
-    }
-  };
-
-  const confirmDiscard = () => {
-    setEditingTaskId(tempTask?.id || null);
-    setIsAlertOpen(false);
-    setTempTask(null);
-  };
-
-  const cancelDiscard = () => {
-    setIsAlertOpen(false);
-    setTempTask(null);
-  };
 
   // Function to determine border color class based on priority
   function getPriorityBorderClass(priority: number | undefined): string {
@@ -593,7 +529,7 @@ export default function Home() {
               changes?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogAction onClick={confirmDiscard}>
+          <AlertDialogAction onClick={() => confirmDiscard(tempTask)}>
             Discard
           </AlertDialogAction>
           <AlertDialogCancel onClick={cancelDiscard}>Cancel</AlertDialogCancel>
