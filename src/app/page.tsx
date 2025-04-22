@@ -3,6 +3,8 @@
 import React, { useState, lazy, Suspense, useRef } from "react";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
+import { useCategoryActions } from "./hooks/useCategoryActions";
+import { useDatePicker } from "./hooks/useDatePicker";
 import {
   Card,
   CardContent,
@@ -79,7 +81,6 @@ const initialCategoryIcons: { [key: string]: string } = {
 };
 
 export default function Home() {
-  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const builtInCategories = [
     "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
   ];
@@ -97,11 +98,9 @@ export default function Home() {
     toast,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [tempTask, setTempTask] = useState<Task | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
 
   // Modularized task handlers
   const {
@@ -120,11 +119,31 @@ export default function Home() {
     setTempTask,
     toast
   });
-  const [customCategory, setCustomCategory] = useState("");
-  const [customCategoryEmoji, setCustomCategoryEmoji] = useState("");
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
-  const [categoryIconsState, setCategoryIconsState]: [ { [key: string]: string }, Dispatch<SetStateAction<{ [key: string]: string }>> ] = useState(initialCategoryIcons);
+
+  // Category logic modularized
+  const {
+    customCategory, setCustomCategory,
+    customCategoryEmoji, setCustomCategoryEmoji,
+    isEmojiPickerOpen, setIsEmojiPickerOpen,
+    isCreateCategoryOpen, setIsCreateCategoryOpen,
+    categoryIconsState, setCategoryIconsState,
+    selectedCategory, setSelectedCategory,
+    isManageCategoriesOpen, setIsManageCategoriesOpen,
+    handleCreateCategory,
+    handleDeleteCategory,
+    handleEmojiSelect,
+    handleCategorySelect,
+  } = useCategoryActions({
+    initialCategoryIcons,
+    builtInCategories,
+    tasks,
+    pushHistory,
+  });
+
+  // Date picker logic modularized
+  const {
+    selectedDate, setSelectedDate, handleClearDate, isToday
+  } = useDatePicker(new Date());
 
 
   const handleAddTask = async () => {
@@ -226,49 +245,8 @@ export default function Home() {
     "Other",
   ];
 
-  const handleCreateCategory = () => {
-    if (customCategory.trim() && customCategoryEmoji.trim()) {
-      setCategoryIconsState(prevState => ({
-        ...prevState,
-        [customCategory]: customCategoryEmoji,
-      }));
-      setSelectedCategory(customCategory); // Auto-select the new category
-      setCustomCategory("");
-      setCustomCategoryEmoji("");
-      setIsCreateCategoryOpen(false);
-    }
-  };
-
-  // Delete custom category and update tasks
-  const handleDeleteCategory = (categoryToDelete: string) => {
-    setCategoryIconsState(prevState => {
-      const newState = { ...prevState };
-      delete newState[categoryToDelete];
-      return newState;
-    });
-    // Update all tasks with this category to 'Uncategorized'
-    const updatedTasks = tasks.map(task =>
-      task.category === categoryToDelete
-        ? { ...task, category: "Uncategorized" }
-        : task
-    );
-    pushHistory(updatedTasks);
-    setSelectedCategory(undefined);
-  };
-
-
-  const handleEmojiSelect = (emoji: string) => {
-    setCustomCategoryEmoji(emoji);
-    setIsEmojiPickerOpen(false); // Close the picker after selection
-  };
-
-  const handleCategorySelect = (value: string | undefined) => {
-    if (value === 'create_new') {
-      setIsCreateCategoryOpen(true);
-    } else {
-      setSelectedCategory(value);
-    }
-  };
+  // (category and emoji logic moved to useCategoryActions)
+  // (date picker logic moved to useDatePicker)
 
 
   return (
