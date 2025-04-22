@@ -58,27 +58,14 @@ interface Task {
 const defaultTasks: Task[] = [
   {
     id: "1",
-    title: "Grocery Shopping",
-    description: "Buy groceries for the week",
-    category: "Errands",
+    title: "Explore TaskWise features",
+    description: "Get acquainted with TaskWise's capabilities",
+    category: "Other",
     priority: 75,
-    deadline: new Date("2024-08-15"),
+    deadline: new Date("2025-08-1"),
     subtasks: [
-      { id: "1a", title: "Create grocery list", completed: false },
-      { id: "1b", title: "Go to the supermarket", completed: false },
-    ],
-    completed: false,
-  },
-  {
-    id: "2",
-    title: "Meeting with John",
-    description: "Discuss project progress",
-    category: "Work",
-    priority: 90,
-    deadline: new Date("2024-08-10"),
-    subtasks: [
-      { id: "2a", title: "Prepare presentation", completed: false },
-      { id: "2b", title: "Send meeting invite", completed: false },
+      { id: "1a", title: "Explore categories", completed: false },
+      { id: "1b", title: "Explore subtasks auto-generation", completed: false },
     ],
     completed: false,
   },
@@ -150,15 +137,21 @@ export default function Home() {
   // --- Keyboard Shortcut Effect ---
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
-        event.preventDefault(); // Prevent default browser undo/redo
-        if (event.shiftKey) {
-          // console.log("Redo triggered");
+      // Redo: Ctrl+Shift+Z (or Cmd+Shift+Z)
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'z' || event.key === 'Z')) {
+        if (canRedo) {
+          event.preventDefault();
           handleRedo();
-        } else {
-          // console.log("Undo triggered");
+        }
+        return;
+      }
+      // Undo: Ctrl+Z (or Cmd+Z) without Shift
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && (event.key === 'z' || event.key === 'Z')) {
+        if (canUndo) {
+          event.preventDefault();
           handleUndo();
         }
+        return;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -429,16 +422,25 @@ export default function Home() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  disabled={(date) =>
-                    date < new Date()
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
+  <div className="flex flex-col items-center gap-2 p-2">
+    <Calendar
+      mode="single"
+      selected={selectedDate}
+      onSelect={setSelectedDate}
+      disabled={(date) => date < new Date()}
+      initialFocus
+    />
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full mt-2"
+      onClick={() => setSelectedDate(new Date())}
+      disabled={!selectedDate || (selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'))}
+    >
+      Clear Selection
+    </Button>
+  </div>
+</PopoverContent>
             </Popover>
             <Button
               type="button"
@@ -636,13 +638,13 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
   const emojis = ["🤖", "🍽️", "🪴", "🍼", "🎁", "🎭", "🐾", "🧸", "🌐", "🔐", "🖥️", "🛠️", "💊", "⭐", "📧", "🎉", "🐶", "🐱", "🛐", "📞", "⚽", "🗨️", "🚜", "🎵", "💳", "✏️", "🚗", "🎬"];
 
   return (
-    <div className="absolute z-10 bg-white shadow-md rounded-md p-2 w-64">
+    <div className="absolute z-10 bg-popover text-popover-foreground shadow-md rounded-md p-2 w-64">
        <ScrollArea className="h-[200px] w-full rounded-md border">
           <div className="grid grid-cols-5 gap-2">
             {emojis.map((emoji) => (
               <button
                 key={emoji}
-                className="text-2xl hover:bg-gray-100 rounded-md"
+                className="text-2xl hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
                 onClick={() => onEmojiSelect(emoji)}
               >
                 {emoji}
