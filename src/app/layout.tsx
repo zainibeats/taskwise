@@ -20,6 +20,16 @@ export const metadata: Metadata = {
   description: 'To-Do List with AI Assistant',
 };
 
+/**
+ * RootLayout component serves as the main layout for the application.
+ * It wraps the children components and provides a consistent structure 
+ * including theme management and a mode toggle button.
+ *
+ * @param {Object} props - The properties passed to the component.
+ * @param {React.ReactNode} props.children - The child components to be rendered within the layout.
+ * 
+ * @returns {JSX.Element} The rendered layout component.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
