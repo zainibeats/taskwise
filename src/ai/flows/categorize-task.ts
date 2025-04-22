@@ -14,6 +14,7 @@ import {z} from 'genkit';
 const CategorizeTaskInputSchema = z.object({
   taskDescription: z.string().describe('The task description to be categorized.'),
   categories: z.array(z.string()).optional().describe('A list of categories to choose from.'),
+  categoriesString: z.string().optional().describe('A comma-separated list of categories to choose from.'),
 });
 export type CategorizeTaskInput = z.infer<typeof CategorizeTaskInputSchema>;
 
@@ -23,7 +24,9 @@ const CategorizeTaskOutputSchema = z.object({
 export type CategorizeTaskOutput = z.infer<typeof CategorizeTaskOutputSchema>;
 
 export async function categorizeTask(input: CategorizeTaskInput): Promise<CategorizeTaskOutput> {
-  return categorizeTaskFlow(input);
+  // Join categories array into a string if present
+  const categoriesString = input.categories ? input.categories.join(", ") : undefined;
+  return categorizeTaskFlow({ ...input, categoriesString });
 }
 
 const prompt = ai.definePrompt({
@@ -31,7 +34,7 @@ const prompt = ai.definePrompt({
   input: {
     schema: z.object({
       taskDescription: z.string().describe('The task description to be categorized.'),
-      categories: z.array(z.string()).optional().describe('A list of categories to choose from.'),
+      categoriesString: z.string().optional().describe('A comma-separated list of categories to choose from.'),
     }),
   },
   output: {
@@ -40,8 +43,8 @@ const prompt = ai.definePrompt({
     }),
   },
   prompt: `You are a task categorization expert. Given the task description, determine the most appropriate category for it from the following list:
-{{#if categories}}
-  {{categories.join(", ")}}
+{{#if categoriesString}}
+  {{categoriesString}}
 {{else}}
   Health, Finance, Work, Personal, Errands, Other
 {{/if}}
