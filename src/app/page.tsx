@@ -37,6 +37,9 @@ import Image from 'next/image'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToastAction } from "@/components/ui/toast"
 import { HistoryControls } from "@/components/history-controls";
+import "./clear-selection.css"; // Custom styles for category clear button
+import "./category-green.css"; // Custom styles for green hover/focus
+
 
 interface Subtask {
   id: string;
@@ -399,31 +402,33 @@ export default function Home() {
               className="flex-grow"
             />
             <div className="flex items-center gap-1">
-              <Select 
-                key={selectedCategory ?? 'no-selection'} 
-                onValueChange={handleCategorySelect} 
-                value={selectedCategory}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent className="max-h-56 overflow-y-auto">
-                  {Object.entries(categoryIconsState).map(([category, icon]) => (
-                    <SelectItem key={category} value={category}>
-                      {icon} {category}
+              <div className="category-green-select">
+                <Select 
+                  key={selectedCategory ?? 'no-selection'} 
+                  onValueChange={handleCategorySelect} 
+                  value={selectedCategory}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56 overflow-y-auto">
+                    {Object.entries(categoryIconsState).map(([category, icon]) => (
+                      <SelectItem key={category} value={category}>
+                        {icon} {category}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="create_new">
+                      Create New
                     </SelectItem>
-                  ))}
-                  <SelectItem value="create_new">
-                    Create New
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setSelectedCategory(undefined)}
                 disabled={!selectedCategory}
-                className="border border-gray-300"
+                className="border border-gray-300 category-clear-btn"
               >
                 Clear Selection
               </Button>
@@ -432,7 +437,7 @@ export default function Home() {
                 variant="ghost"
                 size="icon"
                 aria-label="Manage Categories"
-                className="ml-1"
+                className="ml-1 category-green-btn"
                 onClick={() => setIsManageCategoriesOpen(true)}
               >
                 <Icons.settings className="h-5 w-5" />
