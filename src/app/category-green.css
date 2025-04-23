@@ -4,7 +4,7 @@
   border-color: hsl(var(--primary));
 }
 .category-green-btn:hover,
-.category-green-btn:focus {
+.category-green-btn:focus-visible {
   color: #8be9fd; /* Dracula Cyan */
   border-color: #8be9fd; /* Dracula Cyan */
   background: rgba(139, 233, 253, 0.1); /* Dracula Cyan with opacity */
