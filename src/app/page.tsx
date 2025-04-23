@@ -413,9 +413,9 @@ export default function Home() {
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant={"outline"}
+                  variant="outline"
                   className={cn(
-                    "w-[240px] justify-start text-left font-normal category-green-btn",
+                    "w-[240px] justify-start text-left font-normal hover:bg-background hover:border-input hover:text-foreground",
                     !selectedDate && "text-muted-foreground"
                   )}
                 >
