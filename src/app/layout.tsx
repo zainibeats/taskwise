@@ -2,9 +2,7 @@ import type {Metadata} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from "./theme-provider";
-import { ModeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/toaster";
-import { ClearAllDataButton } from "@/components/ClearAllDataButton";
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -46,10 +44,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <div className="fixed top-4 right-4 z-50 flex flex-col items-end gap-2">
-  <ModeToggle />
-  <ClearAllDataButton />
-</div>
           <Toaster />
         </ThemeProvider>
       </body>

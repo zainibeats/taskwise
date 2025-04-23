@@ -45,7 +45,8 @@ import { HistoryControls } from "@/components/history-controls";
 import { clearAllData } from "@/lib/storage";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
-
+import { ModeToggle } from "@/components/theme-toggle";
+import { ClearAllDataButton } from "@/components/ClearAllDataButton";
 
 import type { Task, Subtask } from "./types/task";
 
@@ -202,7 +203,7 @@ export default function Home() {
   // Wrap category handlers to save to localStorage
   const handleCreateCategory = () => {
     if (customCategory && customCategoryEmoji) {
-      originalHandleCreateCategory(customCategory, customCategoryEmoji);
+      originalHandleCreateCategory();
       const updatedIcons = { ...categoryIconsState, [customCategory]: customCategoryEmoji };
       saveCategoryIcons(updatedIcons);
     }
@@ -341,7 +342,11 @@ export default function Home() {
     <div className="container mx-auto p-4">
       {/* Header row with theme toggle removed; trashcan now in layout */}
       <div className="mb-2" />
-      <Card>
+      <Card className="relative">
+        <div className="absolute top-6 right-6 z-10 flex items-center space-x-2">
+          <ModeToggle />
+          <ClearAllDataButton />
+        </div>
         <CardHeader className="flex flex-col items-center text-center">
           <Image
             src="/images/logo.png"

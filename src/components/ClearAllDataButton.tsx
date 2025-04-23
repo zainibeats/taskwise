@@ -49,7 +49,7 @@ export function ClearAllDataButton() {
           <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={handleClear}>
             Delete Everything
           </AlertDialogAction>
-          <AlertDialogCancel className="text-white hover:text-destructive hover:bg-destructive/10">Cancel</AlertDialogCancel>
+          <AlertDialogCancel className="text-foreground hover:text-destructive hover:bg-destructive/10">Cancel</AlertDialogCancel>
         </AlertDialogContent>
       </AlertDialog>
     </>
