@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
-import { getStoredTasks, saveTasks, getStoredCategoryIcons, saveCategoryIcons } from "@/lib/storage";
+import { getStoredTasks, saveTasks, getStoredCategoryIcons, saveCategoryIcons, getStoredCustomCategories, saveCustomCategories } from "@/lib/storage";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
 import { useCategoryActions } from "./hooks/useCategoryActions";
@@ -172,13 +172,36 @@ export default function Home() {
   const [loadedCategoryIcons, setLoadedCategoryIcons] = useState(initialCategoryIcons);
   
   useEffect(() => {
-    const storedCategoryIcons = getStoredCategoryIcons();
-    if (storedCategoryIcons) {
-      setLoadedCategoryIcons({
-        ...initialCategoryIcons,
-        ...storedCategoryIcons
+    console.log('[PAGE] Initial category load started');
+    console.log('[PAGE] Built-in categories:', builtInCategories);
+    console.log('[PAGE] Initial category icons:', initialCategoryIcons);
+    
+    // First, get the built-in category icons
+    const categoryIconsToLoad = { ...initialCategoryIcons };
+    console.log('[PAGE] Default categories loaded:', categoryIconsToLoad);
+    
+    // Then, get custom categories from localStorage
+    const storedCustomCategories = getStoredCustomCategories();
+    console.log('[PAGE] Custom categories from storage:', storedCustomCategories);
+    
+    if (storedCustomCategories && Object.keys(storedCustomCategories).length > 0) {
+      console.log('[PAGE] Found stored custom categories, merging with defaults');
+      // Merge custom categories with built-in ones
+      Object.entries(storedCustomCategories).forEach(([category, icon]) => {
+        categoryIconsToLoad[category] = icon;
+        console.log(`[PAGE] Added custom category: ${category} with emoji: ${icon}`);
       });
+      
+      toast({ 
+        title: "Custom categories loaded", 
+        description: `Loaded ${Object.keys(storedCustomCategories).length} custom categories`
+      });
+    } else {
+      console.log('[PAGE] No custom categories found in storage');
     }
+    
+    console.log('[PAGE] Final categories to load:', categoryIconsToLoad);
+    setLoadedCategoryIcons(categoryIconsToLoad);
   }, []);
 
   const {
@@ -200,26 +223,50 @@ export default function Home() {
     pushHistory,
   });
   
+  console.log('[PAGE] Category icons state after initialization:', categoryIconsState);
+  
   // Wrap category handlers to save to localStorage
   const handleCreateCategory = () => {
     if (customCategory && customCategoryEmoji) {
+      console.log(`[PAGE] Creating new custom category: ${customCategory} with emoji: ${customCategoryEmoji}`);
       originalHandleCreateCategory();
+      
+      console.log('[PAGE] Category state before update:', categoryIconsState);
       const updatedIcons = { ...categoryIconsState, [customCategory]: customCategoryEmoji };
+      console.log('[PAGE] Updated icons after category creation:', updatedIcons);
+      
       saveCategoryIcons(updatedIcons);
+      // Also save custom categories separately
+      saveCustomCategories(updatedIcons, builtInCategories);
+      toast({ title: "Custom category created", description: `${customCategoryEmoji} ${customCategory}` });
     }
   };
   
   const handleDeleteCategory = (category: string) => {
+    console.log(`[PAGE] Deleting custom category: ${category}`);
     originalHandleDeleteCategory(category);
+    
+    console.log('[PAGE] Category state before delete update:', categoryIconsState);
     const updatedIcons = { ...categoryIconsState };
     delete updatedIcons[category];
+    console.log('[PAGE] Updated icons after category deletion:', updatedIcons);
+    
     saveCategoryIcons(updatedIcons);
+    // Also update custom categories
+    saveCustomCategories(updatedIcons, builtInCategories);
+    toast({ title: "Custom category deleted", description: category });
   };
   
   // Save category icons when they change
   useEffect(() => {
+    console.log('[PAGE] Category icons state changed:', categoryIconsState);
+    
     if (Object.keys(categoryIconsState).length > 0) {
+      console.log('[PAGE] Saving updated category icons to storage');
       saveCategoryIcons(categoryIconsState);
+      
+      // Also save custom categories separately
+      saveCustomCategories(categoryIconsState, builtInCategories);
     }
   }, [categoryIconsState]);
 
