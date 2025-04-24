@@ -8,7 +8,6 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 - **Smart Categorization**: Automatically categorizes tasks based on content
 - **Subtask Suggestions**: AI generates relevant subtasks to help break down complex tasks
 - **Task Management**: Create, edit, complete, and delete tasks with an intuitive interface
-- **Toast Notifications**: Get feedback on actions with elegant toast notifications
 
 ## 🛠️ Technology Stack
 
@@ -28,7 +27,7 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/taskwise.git
+   git clone https://github.com/zainibeats/taskwise
    cd taskwise
    ```
 
@@ -134,16 +133,6 @@ Different task categories have different urgency multipliers:
 - Errands: 0.9
 - Other: 0.8
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgements
-
-- Next.js team for the wonderful framework
-- Genkit AI for the AI capabilities
-- Shadcn UI for the beautiful components

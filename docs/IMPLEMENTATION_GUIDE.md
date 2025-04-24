@@ -79,9 +79,8 @@ export const ai = createAI({
 
 The task prioritization flow in [`src/ai/flows/prioritize-task.ts`](file:///C:/Users/dontb/Documents/repos/to-do-ai/src/ai/flows/prioritize-task.ts) calculates priorities based on:
 
-1. User-defined importance (1-10 scale)
-2. Days until deadline
-3. Category-specific urgency ratios
+1. Days until deadline
+2. Category-specific urgency ratios
 
 The prioritization algorithm will be refined to:
 - Calculate a base priority from importance.
@@ -92,7 +91,7 @@ The prioritization algorithm will be refined to:
 
 ### Subtask Generation
 
-Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](file:///C:/Users/dontb/Documents/repos/to-do-ai/src/ai/flows/suggest-subtasks.ts) to:
+Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](to-do-ai/src/ai/flows/suggest-subtasks.ts) to:
 - Take a task description as input
 - Use AI to generate relevant subtasks that help complete the main task
 - Return an array of subtask descriptions
@@ -105,15 +104,8 @@ Implement the automatic categorization flow in `src/ai/flows/categorize-task.ts`
 
 *Status: [✅ Done]*
 
----
-
-## Next Step: Local Storage Persistence
-
-Implement local storage persistence so that users' to-do lists are saved in their browser and restored when they return to the app. This will provide a seamless experience before moving on to more advanced database solutions.
 
 ## 4. User Interface Implementation [🚧 In Progress]
-
-*Note: Emoji Picker and Undo functionality are implemented but were not part of the original guide.*
 
 ### Main Page
 
@@ -122,7 +114,7 @@ Implement the main todo list page in `src/app/page.tsx` with:
 - Task list with sorting and filtering options
 - Task completion functionality
 
-*Status: [🚧 Partially Implemented?]*
+*Status: [🚧 Partially Implemented]*
 
 ### Task Form Component
 
@@ -130,6 +122,8 @@ Create a form component that:
 - Accepts task title, description, deadline, and importance
 - Uses AI to suggest a category
 - Submits the task to be prioritized and stored
+
+*Status: [✅ Done]*
 
 ### Task List and Item Components
 
@@ -139,18 +133,17 @@ Implement components to:
 - Provide options to edit, complete, or delete tasks
 - Expand to show subtasks
 
-*Status: `task-item.tsx` [✅ Created], includes subtask regeneration. `task-list.tsx` [✅ Created]. `subtask-list.tsx` [🚧 To Do].*
+*Status: `task-item.tsx` [✅ Created], `task-list.tsx` [✅ Created]. `subtask-list.tsx` and subtask regeneration [🚧 To Do].*
 
-## 5. Database Setup
+## 5. Database Setup [🚧 In Progress]
 
-### Local Storage Implementation
+### Local Storage Implementation [✅ Done]
 
 For data persistence, TaskWise uses browser localStorage, providing several benefits:
 
 1. **Privacy**: All user data stays on their device, not on a server
 2. **Simplicity**: No database setup required for self-hosting
 3. **Offline Use**: Application remains functional without internet connection
-4. **Known Issue**: Custom categories are not restored when reopening the app after closing it, and will be lost. This bug will be addressed in a future update.
 
 The implementation is in `src/lib/storage.ts` and provides the following functionality:
 
@@ -163,7 +156,7 @@ saveCategoryIcons(icons: object): boolean // Save categories and icons
 clearAllData(): boolean                // Clear all application data
 ```
 
-### Future Database Support (Optional)
+### Future Database Support [🚧 To Do]
 
 If server-side persistence is desired in the future, the storage layer is designed to be extensible. Options to consider:
 
@@ -192,7 +185,7 @@ If server-side persistence is desired in the future, the storage layer is design
    );
    ```
 
-## 6. Server Actions
+## 6. Server Actions [🚧 To Do]
 
 Implement server actions for database operations:
 
@@ -277,31 +270,30 @@ export async function createTask(formData: FormData) {
    - Use the Next.js built-in performance analysis tools
    - Implement caching for AI requests to reduce API usage
 
-3. **Regular Maintenance**:
-   - Update dependencies regularly
-   - Monitor AI API usage and costs
-   - Back up the database regularly
-
 ## 10. Future Enhancements
 
-1. **User Authentication**:
+
+1. **User-defined importance**
+   - Allow option to manually set importance to influence priority score (1-10 scale)
+
+2. **User Authentication**:
    - Implement authentication using NextAuth.js
 
-2. **Mobile Optimization**:
+3. **Mobile Optimization**:
    - Ensure the UI works well on mobile devices
 
-3. **Advanced AI Features**:
+4. **Advanced AI Features**:
    - Task scheduling suggestions
    - Time estimation for tasks
    - Task dependency tracking
 
-4. **Integration with Calendar Apps**:
+5. **Integration with Calendar Apps**:
    - Allow syncing with Google Calendar or other calendar services
 
-5. **Progressive Web App (PWA)**:
+6. **Progressive Web App (PWA)**:
    - Configure for offline use as a PWA
 
-6. **Kanban-Style UI (Optional)**:
+7. **Kanban-Style UI (Optional)**:
    - Implement a multi-column layout (similar to Trello or TickTick) where columns could represent categories, statuses, or custom groupings.
    - Use a library like `@dnd-kit` to enable drag-and-drop functionality for tasks between columns and for reordering within columns.
    - Restructure state to manage columns and the tasks within them.
