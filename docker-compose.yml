@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  taskwise:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - GENKIT_API_KEY=${GENKIT_API_KEY}
+    restart: unless-stopped
+    # Uncomment the following lines if you want to persist the localStorage data
+    # volumes:
+    #   - taskwise-data:/app/.next/cache
+
+# Uncomment if you want to use volumes for data persistence
+# volumes:
+#   taskwise-data:

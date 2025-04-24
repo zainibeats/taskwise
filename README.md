@@ -87,7 +87,9 @@ TaskWise uses browser localStorage for task persistence, which means:
 
 ### Docker Deployment (Optional)
 
-Bring your own Docker setup with a `Dockerfile` like:
+#### Using Dockerfile
+
+A `Dockerfile` is included for building a Docker image:
 
 ```dockerfile
 FROM node:18-alpine
@@ -104,6 +106,32 @@ Build and run with:
 docker build -t taskwise .
 docker run -p 3000:3000 -e GENKIT_API_KEY=your_key_here taskwise
 ```
+
+#### Using Docker Compose (Recommended)
+
+For a more streamlined setup, use the provided `docker-compose.yml`:
+
+```powershell
+# Set your Genkit API key in the environment (Windows PowerShell)
+$env:GENKIT_API_KEY="your_key_here"
+
+# Start the application
+docker-compose up -d
+
+# To stop the application
+docker-compose down
+```
+
+For bash/Linux/macOS:
+```bash
+# Set your Genkit API key in the environment
+export GENKIT_API_KEY=your_key_here
+
+# Start the application
+docker-compose up -d
+```
+
+This method handles environment variables, port mapping, and container lifecycle management automatically.
 
 ## 💾 Data Storage
 
