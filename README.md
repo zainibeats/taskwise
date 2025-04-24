@@ -85,7 +85,7 @@ TaskWise uses browser localStorage for task persistence, which means:
 2. Deploy to Vercel, Netlify, or any static hosting service that supports Next.js
 3. Set the `GENKIT_API_KEY` environment variable in your hosting provider's settings
 
-### Docker Deployment (Optional)
+### Docker Deployment (Recommended)
 
 #### Using Dockerfile
 
@@ -107,7 +107,7 @@ docker build -t taskwise .
 docker run -p 3000:3000 -e GENKIT_API_KEY=your_key_here taskwise
 ```
 
-#### Using Docker Compose (Recommended)
+#### Using Docker Compose
 
 For a more streamlined setup, use the provided `docker-compose.yml`:
 
