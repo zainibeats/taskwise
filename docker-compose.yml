@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GENKIT_API_KEY=${GENKIT_API_KEY}
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
     restart: unless-stopped
     # Uncomment the following lines if you want to persist the localStorage data
     # volumes:

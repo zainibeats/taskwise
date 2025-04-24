@@ -12,7 +12,7 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 ## 🛠️ Technology Stack
 
 - [Next.js](https://nextjs.org/) - React framework for building the UI
-- [Genkit AI](https://genkit.ai/) - AI library for task prioritization and subtask generation
+- [Genkit](https://genkit.ai/) with [Google Gemini API](https://ai.google.dev/gemini-api) - AI framework for task prioritization and subtask generation
 - [Shadcn UI](https://ui.shadcn.com/) - Component library for the user interface
 - [date-fns](https://date-fns.org/) - Date manipulation library
 
@@ -38,11 +38,11 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
    yarn install
    ```
 
-3. Create a `.env.local` file with your Genkit API key:
+3. Create a `.env.local` file with your Google AI API key:
    ```
-   GENKIT_API_KEY=your_genkit_api_key
+   GOOGLE_AI_API_KEY=your_google_ai_api_key
    ```
-   (You can obtain a Genkit API key from [genkit.ai](https://genkit.ai))
+   (You can obtain a Google AI API key from [Google AI Studio](https://aistudio.google.com/app/apikey) - they offer a free tier with 60 queries per minute)
 
 4. Run the development server:
    ```bash
@@ -83,7 +83,7 @@ TaskWise uses browser localStorage for task persistence, which means:
 
 1. Fork the repository on GitHub
 2. Deploy to Vercel, Netlify, or any static hosting service that supports Next.js
-3. Set the `GENKIT_API_KEY` environment variable in your hosting provider's settings
+3. Set the `GOOGLE_AI_API_KEY` environment variable in your hosting provider's settings
 
 ### Docker Deployment (Recommended)
 
@@ -95,6 +95,7 @@ A `Dockerfile` is included for building a Docker image:
 FROM node:18-alpine
 WORKDIR /app
 COPY . .
+# Genkit and dependencies are installed automatically
 RUN npm install
 RUN npm run build
 EXPOSE 3000
@@ -104,7 +105,7 @@ CMD ["npm", "start"]
 Build and run with:
 ```bash
 docker build -t taskwise .
-docker run -p 3000:3000 -e GENKIT_API_KEY=your_key_here taskwise
+docker run -p 3000:3000 -e GOOGLE_AI_API_KEY=your_key_here taskwise
 ```
 
 #### Using Docker Compose
@@ -112,8 +113,8 @@ docker run -p 3000:3000 -e GENKIT_API_KEY=your_key_here taskwise
 For a more streamlined setup, use the provided `docker-compose.yml`:
 
 ```powershell
-# Set your Genkit API key in the environment (Windows PowerShell)
-$env:GENKIT_API_KEY="your_key_here"
+# Set your Google AI API key in the environment (Windows PowerShell)
+$env:GOOGLE_AI_API_KEY="your_key_here"
 
 # Start the application
 docker-compose up -d
@@ -124,8 +125,8 @@ docker-compose down
 
 For bash/Linux/macOS:
 ```bash
-# Set your Genkit API key in the environment
-export GENKIT_API_KEY=your_key_here
+# Set your Google AI API key in the environment
+export GOOGLE_AI_API_KEY=your_key_here
 
 # Start the application
 docker-compose up -d
