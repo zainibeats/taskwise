@@ -47,6 +47,7 @@ import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 import { ModeToggle } from "@/components/theme-toggle";
 import { ClearAllDataButton } from "@/components/ClearAllDataButton";
+import { CreateCategoryModal } from "@/components/CreateCategoryModal";
 
 import type { Task, Subtask } from "./types/task";
 
@@ -204,17 +205,12 @@ export default function Home() {
     setLoadedCategoryIcons(categoryIconsToLoad);
   }, []);
 
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const {
-    customCategory, setCustomCategory,
-    customCategoryEmoji, setCustomCategoryEmoji,
-    isEmojiPickerOpen, setIsEmojiPickerOpen,
-    isCreateCategoryOpen, setIsCreateCategoryOpen,
     categoryIconsState, setCategoryIconsState,
     selectedCategory, setSelectedCategory,
     isManageCategoriesOpen, setIsManageCategoriesOpen,
-    handleCreateCategory: originalHandleCreateCategory,
     handleDeleteCategory: originalHandleDeleteCategory,
-    handleEmojiSelect,
     handleCategorySelect,
   } = useCategoryActions({
     initialCategoryIcons: loadedCategoryIcons,
@@ -222,24 +218,18 @@ export default function Home() {
     tasks,
     pushHistory,
   });
+  // Removed customCategory and customCategoryEmoji state. Only use modal props now.
   
   console.log('[PAGE] Category icons state after initialization:', categoryIconsState);
   
   // Wrap category handlers to save to localStorage
-  const handleCreateCategory = () => {
-    if (customCategory && customCategoryEmoji) {
-      console.log(`[PAGE] Creating new custom category: ${customCategory} with emoji: ${customCategoryEmoji}`);
-      originalHandleCreateCategory();
-      
-      console.log('[PAGE] Category state before update:', categoryIconsState);
-      const updatedIcons = { ...categoryIconsState, [customCategory]: customCategoryEmoji };
-      console.log('[PAGE] Updated icons after category creation:', updatedIcons);
-      
-      saveCategoryIcons(updatedIcons);
-      // Also save custom categories separately
-      saveCustomCategories(updatedIcons, builtInCategories);
-      toast({ title: "Custom category created", description: `${customCategoryEmoji} ${customCategory}` });
-    }
+  const handleCreateCategory = (category: string, emoji: string) => {
+    const updatedIcons = { ...categoryIconsState, [category]: emoji };
+    setCategoryIconsState(updatedIcons);
+    setSelectedCategory(category);
+    saveCategoryIcons(updatedIcons);
+    saveCustomCategories(updatedIcons, builtInCategories);
+    toast({ title: "Custom category created", description: `${emoji} ${category}` });
   };
   
   const handleDeleteCategory = (category: string) => {
@@ -422,9 +412,16 @@ export default function Home() {
 />
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 w-full sm:w-auto">
               <div className="category-green-select">
-                <Select 
-                  key={selectedCategory ?? 'no-selection'} 
-                  onValueChange={handleCategorySelect} 
+                <Select
+                  key={selectedCategory ?? 'no-selection'}
+                  onValueChange={(value) => {
+                    if (value === 'create_new') {
+                      setIsCreateCategoryOpen(true);
+                      // Don't change the selection
+                      return;
+                    }
+                    handleCategorySelect(value);
+                  }}
                   value={selectedCategory}
                 >
                   <SelectTrigger className="w-[180px]">
@@ -441,6 +438,11 @@ export default function Home() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                <CreateCategoryModal
+                  open={isCreateCategoryOpen}
+                  onOpenChange={setIsCreateCategoryOpen}
+                  onCreate={handleCreateCategory}
+                />
               </div>
               <Button
                 type="button"
@@ -609,13 +611,16 @@ export default function Home() {
                       {/* Show edit form if editing this task */}
                       {editingTaskId === task.id ? (
                         <Suspense fallback={<div>Loading...</div>}>
-                          <TaskEditForm
-                            task={task}
-                            onUpdate={(updatedTask) => handleUpdateTask(task.id, updatedTask)}
-                            onCancel={() => setEditingTaskId(null)}
-                            categoryIcons={categoryIconsState} // Pass the category icons
-                            setCategoryIcons={setCategoryIconsState}
-                          />
+                           <TaskEditForm
+                             task={task}
+                             onUpdate={(updatedTask) => handleUpdateTask(task.id, updatedTask)}
+                             onCancel={() => setEditingTaskId(null)}
+                             categoryIcons={categoryIconsState} // Pass the category icons
+                             setCategoryIcons={setCategoryIconsState}
+                             isCreateCategoryOpen={isCreateCategoryOpen}
+                             setIsCreateCategoryOpen={setIsCreateCategoryOpen}
+                             onCreateCategory={handleCreateCategory}
+                           />
                         </Suspense>
                       ) : (
                         <>
@@ -700,66 +705,9 @@ export default function Home() {
         </AlertDialogContent>
       </AlertDialog>
       {/*
-        Create Category Modal
-        Allows the user to add a new custom category with an emoji icon.
+        Create Category Modal (shared, now the only source of truth)
       */}
-      <AlertDialog open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create New Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Enter the category name and select an emoji.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="category-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                type="text"
-                id="category-name"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="category-emoji" className="text-right">
-                Emoji
-              </Label>
-              <div className="col-span-3 flex items-center space-x-2">
-                <Input
-                  type="text"
-                  id="category-emoji"
-                  value={customCategoryEmoji}
-                  onChange={(e) => setCustomCategoryEmoji(e.target.value)}
-                />
-                {/* Emoji picker button and popover */}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="category-green-btn"
-                  onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
-                >
-                  <Icons.plusCircle className="h-4 w-4" />
-                </Button>
-                {isEmojiPickerOpen && (
-                  <EmojiPicker onEmojiSelect={handleEmojiSelect} onClose={() => setIsEmojiPickerOpen(false)} />
-                )}
-              </div>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setIsCreateCategoryOpen(false);
-              setCustomCategory("");
-              setCustomCategoryEmoji("");
-            }} className="category-clear-btn">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCreateCategory}>Create</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* The shared modal is now rendered inline with the dropdown and TaskEditForm. No duplicate modals. */}
 
 
     </div>
