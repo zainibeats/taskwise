@@ -407,7 +407,7 @@ export default function Home() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center gap-2 max-w-full overflow-hidden">
             <Input
   type="text"
   placeholder="Add a task..."
@@ -420,7 +420,7 @@ export default function Home() {
     }
   }}
 />
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 w-full sm:w-auto">
               <div className="category-green-select">
                 <Select 
                   key={selectedCategory ?? 'no-selection'} 
@@ -447,7 +447,7 @@ export default function Home() {
                 variant="outline"
                 onClick={() => setSelectedCategory(undefined)}
                 disabled={!selectedCategory}
-                className="border border-gray-300 category-clear-btn"
+                className="border border-gray-300 category-clear-btn flex-shrink-0"
               >
                 Clear Selection
               </Button>
@@ -456,7 +456,7 @@ export default function Home() {
                 variant="ghost"
                 size="icon"
                 aria-label="Manage Categories"
-                className="ml-1 category-green-btn"
+                className="ml-1 category-green-btn flex-shrink-0"
                 onClick={() => setIsManageCategoriesOpen(true)}
               >
                 <Icons.settings className="h-5 w-5" />
