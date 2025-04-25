@@ -57,7 +57,7 @@ const defaultTasks: Task[] = [
     description: "Get acquainted with TaskWise's capabilities",
     category: "Other",
     priority: 50,
-    deadline: new Date("2025-08-1"),
+    deadline: new Date("2025-08-01"),
     subtasks: [
       { id: "1a", title: "Explore categories", completed: false },
       { id: "1b", title: "Create custom category", completed: false },
