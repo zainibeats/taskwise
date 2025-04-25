@@ -149,7 +149,6 @@ This approach prioritizes user privacy while ensuring your data remains accessib
 
 Tasks are prioritized based on:
 - Deadline proximity
-- User-defined importance (1-10)
 - Task category. The AI considers the category context when evaluating the urgency implied by the deadline, aiming for a balanced priority score even for near-term tasks.
 
 ### Category-Specific Urgency Ratios
