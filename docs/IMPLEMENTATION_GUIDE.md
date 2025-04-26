@@ -207,6 +207,21 @@ Each API endpoint includes:
 
 The API routes are implemented using Next.js API routes in the `src/app/api` directory.
 
+### Client-Side Storage Strategy [✅ Done]
+
+TaskWise uses a two-tier storage approach:
+
+1. **Primary Storage**: SQLite database through API endpoints for all data (tasks, categories, etc.)
+2. **Fallback Storage**: localStorage is used only as a fallback for tasks when the API is unavailable
+   - Categories are now stored exclusively in the database
+   - This ensures consistent category management across devices
+   - No dependency on localStorage for category management
+
+This approach ensures:
+- Data is primarily managed server-side for cross-device consistency
+- Basic functionality is maintained even if API connectivity is temporarily lost
+- Category management is always consistent through the API
+
 ### Client Hooks [✅ Done]
 
 To interact with the API from the frontend, custom React hooks are provided:
