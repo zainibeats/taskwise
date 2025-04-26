@@ -248,36 +248,81 @@ export default function Home() {
   const [loadedCategoryIcons, setLoadedCategoryIcons] = useState(initialCategoryIcons);
   
   useEffect(() => {
-    console.log('[PAGE] Initial category load started');
-    console.log('[PAGE] Built-in categories:', builtInCategories);
-    console.log('[PAGE] Initial category icons:', initialCategoryIcons);
-    
-    // First, get the built-in category icons
-    const categoryIconsToLoad = { ...initialCategoryIcons };
-    console.log('[PAGE] Default categories loaded:', categoryIconsToLoad);
-    
-    // Then, get custom categories from localStorage
-    const storedCustomCategories = getStoredCustomCategories();
-    console.log('[PAGE] Custom categories from storage:', storedCustomCategories);
-    
-    if (storedCustomCategories && Object.keys(storedCustomCategories).length > 0) {
-      console.log('[PAGE] Found stored custom categories, merging with defaults');
-      // Merge custom categories with built-in ones
-      Object.entries(storedCustomCategories).forEach(([category, icon]) => {
-        categoryIconsToLoad[category] = icon;
-        console.log(`[PAGE] Added custom category: ${category} with emoji: ${icon}`);
-      });
+    async function loadCategories() {
+      console.log('[PAGE] Initial category load started');
+      console.log('[PAGE] Built-in categories:', builtInCategories);
+      console.log('[PAGE] Initial category icons:', initialCategoryIcons);
       
-      toast({ 
-        title: "Custom categories loaded", 
-        description: `Loaded ${Object.keys(storedCustomCategories).length} custom categories`
-      });
-    } else {
-      console.log('[PAGE] No custom categories found in storage');
+      // First, get the built-in category icons
+      const categoryIconsToLoad = { ...initialCategoryIcons };
+      console.log('[PAGE] Default categories loaded:', categoryIconsToLoad);
+
+      try {
+        // Try to load categories from the database
+        console.log('[DEBUG] Fetching categories from API...');
+        const apiCategories = await CategoryApi.getAllCategories();
+        
+        if (apiCategories && Object.keys(apiCategories).length > 0) {
+          console.log('[DEBUG] Categories loaded from database:', apiCategories);
+          
+          // Merge API categories with built-in ones (API categories take precedence)
+          const mergedCategories = { ...categoryIconsToLoad, ...apiCategories };
+          console.log('[DEBUG] Merged categories:', mergedCategories);
+          
+          setLoadedCategoryIcons(mergedCategories);
+          toast({ 
+            title: "Categories loaded from database", 
+            description: `Loaded ${Object.keys(apiCategories).length} categories`
+          });
+        } else {
+          console.log('[DEBUG] No categories from API, checking localStorage');
+          
+          // Then, get custom categories from localStorage as fallback
+          const storedCustomCategories = getStoredCustomCategories();
+          console.log('[PAGE] Custom categories from storage:', storedCustomCategories);
+          
+          if (storedCustomCategories && Object.keys(storedCustomCategories).length > 0) {
+            console.log('[PAGE] Found stored custom categories, merging with defaults');
+            // Merge custom categories with built-in ones
+            Object.entries(storedCustomCategories).forEach(([category, icon]) => {
+              categoryIconsToLoad[category] = icon;
+              console.log(`[PAGE] Added custom category: ${category} with emoji: ${icon}`);
+            });
+            
+            toast({ 
+              title: "Custom categories loaded from localStorage", 
+              description: `Loaded ${Object.keys(storedCustomCategories).length} custom categories`
+            });
+          } else {
+            console.log('[PAGE] No custom categories found in storage');
+          }
+          
+          console.log('[PAGE] Final categories to load:', categoryIconsToLoad);
+          setLoadedCategoryIcons(categoryIconsToLoad);
+        }
+      } catch (error) {
+        console.error('[DEBUG] Error loading categories from API:', error);
+        
+        // Fall back to localStorage
+        const storedCustomCategories = getStoredCustomCategories();
+        if (storedCustomCategories && Object.keys(storedCustomCategories).length > 0) {
+          console.log('[PAGE] Found stored custom categories, merging with defaults');
+          // Merge custom categories with built-in ones
+          Object.entries(storedCustomCategories).forEach(([category, icon]) => {
+            categoryIconsToLoad[category] = icon;
+          });
+          
+          toast({ 
+            title: "Custom categories loaded from localStorage (API error)", 
+            description: `Loaded ${Object.keys(storedCustomCategories).length} custom categories`
+          });
+          
+          setLoadedCategoryIcons(categoryIconsToLoad);
+        }
+      }
     }
     
-    console.log('[PAGE] Final categories to load:', categoryIconsToLoad);
-    setLoadedCategoryIcons(categoryIconsToLoad);
+    loadCategories();
   }, []);
 
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
@@ -298,16 +343,36 @@ export default function Home() {
   console.log('[PAGE] Category icons state after initialization:', categoryIconsState);
   
   // Wrap category handlers to save to localStorage
-  const handleCreateCategory = (category: string, emoji: string) => {
+  const handleCreateCategory = async (category: string, emoji: string) => {
+    console.log(`[DEBUG] Creating category: ${category} with emoji: ${emoji}`);
+    
+    // First update UI state
     const updatedIcons = { ...categoryIconsState, [category]: emoji };
     setCategoryIconsState(updatedIcons);
     setSelectedCategory(category);
+    
+    // Save to localStorage as fallback
     saveCategoryIcons(updatedIcons);
     saveCustomCategories(updatedIcons, builtInCategories);
-    toast({ title: "Custom category created", description: `${emoji} ${category}` });
+    
+    // Save to database using API
+    try {
+      const success = await CategoryApi.saveCategory(category, emoji);
+      if (success) {
+        console.log(`[DEBUG] Category "${category}" saved to database successfully`);
+        toast({ title: "Custom category created", description: `${emoji} ${category}` });
+      } else {
+        console.error(`[DEBUG] Failed to save category "${category}" to database`);
+        // Still show toast as the UI is updated even if database fails
+        toast({ title: "Custom category created (local only)", description: `${emoji} ${category}` });
+      }
+    } catch (error) {
+      console.error(`[DEBUG] Error saving category "${category}" to database:`, error);
+      toast({ title: "Custom category created (local only)", description: `${emoji} ${category}` });
+    }
   };
   
-  const handleDeleteCategory = (category: string) => {
+  const handleDeleteCategory = async (category: string) => {
     console.log(`[PAGE] Deleting custom category: ${category}`);
     originalHandleDeleteCategory(category);
     
@@ -316,10 +381,24 @@ export default function Home() {
     delete updatedIcons[category];
     console.log('[PAGE] Updated icons after category deletion:', updatedIcons);
     
+    // Save to localStorage as fallback
     saveCategoryIcons(updatedIcons);
-    // Also update custom categories
     saveCustomCategories(updatedIcons, builtInCategories);
-    toast({ title: "Custom category deleted", description: category });
+    
+    // Delete from database using API
+    try {
+      const success = await CategoryApi.deleteCategory(category);
+      if (success) {
+        console.log(`[DEBUG] Category "${category}" deleted from database successfully`);
+        toast({ title: "Custom category deleted", description: category });
+      } else {
+        console.error(`[DEBUG] Failed to delete category "${category}" from database`);
+        toast({ title: "Custom category deleted (local only)", description: category });
+      }
+    } catch (error) {
+      console.error(`[DEBUG] Error deleting category "${category}" from database:`, error);
+      toast({ title: "Custom category deleted (local only)", description: category });
+    }
   };
   
   // Save category icons when they change

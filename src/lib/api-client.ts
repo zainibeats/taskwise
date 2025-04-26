@@ -232,13 +232,18 @@ export const CategoryApi = {
    * @returns Object with category names and icons
    */
   async getAllCategories(): Promise<Record<string, string>> {
+    console.log("[API] Starting getAllCategories...");
+    console.log("[API] Using API URL:", `${API_BASE_URL}/api/categories`);
     try {
       const response = await fetch(`${API_BASE_URL}/api/categories`);
+      console.log("[API] Categories response status:", response.status);
       if (!response.ok) {
+        console.error("[API] Categories response not OK:", response.status, response.statusText);
         throw new Error(`Failed to fetch categories: ${response.status}`);
       }
       
       const categories = await response.json();
+      console.log("[API] Categories received:", categories);
       
       // Convert array to object format
       const categoryObj: Record<string, string> = {};
@@ -246,9 +251,10 @@ export const CategoryApi = {
         categoryObj[category.name] = category.icon;
       });
       
+      console.log("[API] Mapped categories:", categoryObj);
       return categoryObj;
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('[API] Error fetching categories:', error);
       return {};
     }
   },
@@ -260,6 +266,8 @@ export const CategoryApi = {
    * @returns Whether save was successful
    */
   async saveCategory(name: string, icon: string): Promise<boolean> {
+    console.log("[API] Saving category:", name, icon);
+    console.log("[API] Using API URL:", `${API_BASE_URL}/api/categories`);
     try {
       const response = await fetch(`${API_BASE_URL}/api/categories`, {
         method: 'POST',
@@ -269,13 +277,16 @@ export const CategoryApi = {
         body: JSON.stringify({ name, icon }),
       });
 
+      console.log("[API] Save category response status:", response.status);
       if (!response.ok) {
+        console.error("[API] Save category response not OK:", response.status, response.statusText);
         throw new Error(`Failed to save category: ${response.status}`);
       }
 
+      console.log("[API] Category saved successfully:", name);
       return true;
     } catch (error) {
-      console.error('Error saving category:', error);
+      console.error('[API] Error saving category:', error);
       return false;
     }
   },
@@ -286,18 +297,24 @@ export const CategoryApi = {
    * @returns Whether deletion was successful
    */
   async deleteCategory(name: string): Promise<boolean> {
+    console.log("[API] Deleting category:", name);
+    const url = `${API_BASE_URL}/api/categories?name=${encodeURIComponent(name)}`;
+    console.log("[API] Using API URL:", url);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/categories?name=${encodeURIComponent(name)}`, {
+      const response = await fetch(url, {
         method: 'DELETE',
       });
 
+      console.log("[API] Delete category response status:", response.status);
       if (!response.ok) {
+        console.error("[API] Delete category response not OK:", response.status, response.statusText);
         throw new Error(`Failed to delete category: ${response.status}`);
       }
 
+      console.log("[API] Category deleted successfully:", name);
       return true;
     } catch (error) {
-      console.error('Error deleting category:', error);
+      console.error('[API] Error deleting category:', error);
       return false;
     }
   }
