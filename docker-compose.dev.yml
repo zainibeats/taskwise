@@ -1,0 +1,19 @@
+services:
+  taskwise:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # For local development, use localhost
+        - NEXT_PUBLIC_API_URL=http://localhost:3100
+    ports:
+      - "9002:9002"  # Development web UI port
+      - "3100:3100"  # Database API
+    environment:
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
+      - NODE_ENV=development
+      - PORT=9002
+    volumes:
+      - ./:/app  # Mount entire directory for hot reloading
+      - /app/node_modules  # Prevent node_modules from being overwritten
+    command: sh -c "node db/connection.js & npm run dev"  # Run in development mode 
