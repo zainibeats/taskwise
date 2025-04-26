@@ -71,4 +71,44 @@ The database service provides the following API endpoints:
 
 ## Production Use
 
-In production, the TaskWise application uses the direct SQLite connection method (not this service), as module reloading isn't an issue in production mode. The application automatically detects whether it's running in development or production mode and adjusts accordingly. 
+In production, the application can use two approaches:
+
+1. **Direct SQLite Connection**: When running in production mode without Docker, the application uses the direct SQLite connection method as module reloading isn't an issue.
+
+2. **Database Service**: When running with Docker, both the database service and the Next.js application are started together, providing a consistent interface and better isolation.
+
+## Docker Configuration
+
+When running in Docker:
+
+1. The database service is started automatically alongside the Next.js application using the command:
+   ```
+   sh -c "node db/connection.js & npm start"
+   ```
+
+2. Environment variables are configured in the Dockerfile and docker-compose.yml:
+   ```
+   NODE_ENV=production
+   NEXT_PUBLIC_API_URL=http://localhost:3100
+   ```
+
+3. Both ports are exposed:
+   - 3000: Next.js application
+   - 3100: Database service
+
+4. Data persistence is handled through Docker volumes:
+   ```
+   VOLUME ["/app/data"]
+   ```
+
+5. The Docker Compose configuration includes:
+   ```yaml
+   volumes:
+     - ./data:/app/data
+     - ./logs:/app/logs
+   ```
+
+This setup ensures that:
+- The database is persistent across container restarts
+- The application and database service work together seamlessly
+- Logging information is available outside the container 

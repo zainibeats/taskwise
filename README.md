@@ -40,20 +40,30 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
    yarn install
    ```
 
-3. Create a `.env.local` file with your Google AI API key:
+3. Create a `.env.local` file with your configuration:
    ```
-   GOOGLE_AI_API_KEY=your_google_ai_api_key
+   # Required
+   GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+   
+   # Optional - defaults shown below
+   NODE_ENV=development
+   PORT=9002
+   DB_SERVER_PORT=3100
+   NEXT_PUBLIC_API_URL=http://localhost:3100
    ```
    (You can obtain a Google AI API key from [Google AI Studio](https://aistudio.google.com/app/apikey) - they offer a free tier with 60 queries per minute)
 
-4. Run the development server:
+4. Run the development server with database support:
    ```bash
-   npm run dev
-   # or
-   yarn dev
+   # Run both database service and Next.js in one command
+   npm run dev:with-db
+   
+   # Or run them separately
+   npm run db:start   # In one terminal
+   npm run dev        # In another terminal
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+5. Open [http://localhost:9002](http://localhost:9002) in your browser to see the application.
 
 ## 🔒 Data Storage Approach
 
@@ -98,19 +108,30 @@ A `Dockerfile` is included for building a Docker image:
 
 ```dockerfile
 FROM node:18-alpine
+
+# Install dependencies required for better-sqlite3
+RUN apk add --no-cache python3 make g++ gcc libc-dev
+
 WORKDIR /app
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs && chmod 777 /app/data /app/logs
+
 COPY . .
-# Genkit and dependencies are installed automatically
 RUN npm install
 RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
+
+# Expose both app and DB service ports
+EXPOSE 3000 3100
+
+# Start both the database service and Next.js app
+CMD ["sh", "-c", "node db/connection.js & npm start"]
 ```
 
 Build and run with:
 ```bash
 docker build -t taskwise .
-docker run -p 3000:3000 -e GOOGLE_AI_API_KEY=your_key_here -v ./data:/app/data taskwise
+docker run -p 3000:3000 -p 3100:3100 -e GOOGLE_AI_API_KEY=your_key_here -v ./data:/app/data taskwise
 ```
 
 > **Note**: The `-v ./data:/app/data` flag creates a volume to persist your database outside the container.
@@ -139,7 +160,12 @@ export GOOGLE_AI_API_KEY=your_key_here
 docker-compose up -d
 ```
 
-This method handles environment variables, port mapping, volume mounting, and container lifecycle management automatically.
+This method automatically handles:
+- Environment variables (Google AI API key)
+- Port mapping (3000 for web app, 3100 for database service)
+- Volume mounting for data persistence
+- Container lifecycle management
+- Starting both the database service and web application
 
 ## 🧠 AI Features Explained
 

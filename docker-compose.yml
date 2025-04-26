@@ -5,8 +5,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+      - "3100:3100"
     environment:
       - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3100
     restart: unless-stopped
     volumes:
       - ./data:/app/data
+      - ./logs:/app/logs

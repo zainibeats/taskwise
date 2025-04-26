@@ -231,6 +231,9 @@ WORKDIR /app
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chmod 777 /app/data
 
+# Create a directory for logs
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
 # Copy package files first to leverage Docker caching
 COPY package*.json ./
 RUN npm install
@@ -241,19 +244,49 @@ COPY . .
 # Build the application
 RUN npm run build
 
-EXPOSE 3000
+# Expose both app port and database service port
+EXPOSE 3000 3100
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=http://localhost:3100
 
 # Add volume for persistent data
 VOLUME ["/app/data"]
 
-CMD ["npm", "start"]
+# Start both the database service and the Next.js application
+CMD ["sh", "-c", "node db/connection.js & npm start"]
 ```
 
 This Docker configuration:
 - Installs dependencies required for SQLite
-- Creates a data directory with appropriate permissions
-- Mounts a volume to ensure database persistence across container restarts
+- Creates data and logs directories with appropriate permissions
+- Exposes both the application port (3000) and database service port (3100)
+- Sets environment variables for production mode
+- Mounts volumes to ensure database persistence across container restarts
+- Starts both the database service and the Next.js application
 - Optimizes the build process with layer caching
+
+The docker-compose.yml file has been similarly updated:
+
+```yaml
+services:
+  taskwise:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "3100:3100"
+    environment:
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3100
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+```
 
 ## 6. Development Mode Database Persistence [🚧 To Do]
 
