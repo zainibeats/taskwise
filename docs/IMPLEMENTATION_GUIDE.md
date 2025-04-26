@@ -14,7 +14,7 @@ This guide outlines the detailed process for completing and deploying the TaskWi
 
 2. **Install Dependencies** [✅ Done]
    ```bash
-   npm install genkit date-fns
+   npm install genkit date-fns better-sqlite3
    npm install -D tailwindcss postcss autoprefixer
    npx tailwindcss init -p
    ```
@@ -37,34 +37,38 @@ This guide outlines the detailed process for completing and deploying the TaskWi
 ```
 src/
 ├── app/
-│   ├── page.tsx           # Main todo list page
-│   ├── layout.tsx         # Root layout with providers
-│   └── globals.css        # Global styles
+│   ├── page.tsx              # Main todo list page
+│   ├── layout.tsx            # Root layout with providers
+│   ├── globals.css           # Global styles
+│   ├── hooks/                # React hooks
+│   │   ├── useTasks.ts       # Hook for task operations
+│   │   └── useCategories.ts  # Hook for category operations
+│   ├── api/                  # API routes
+│   │   ├── tasks/            # Task API endpoints
+│   │   └── categories/       # Category API endpoints
+│   └── types/                # TypeScript type definitions
 ├── components/
-│   ├── ui/                # Shadcn UI components
-│   ├── task-form.tsx      # Form for creating new tasks
-│   ├── task-list.tsx      # List of tasks with filtering
-│   ├── task-item.tsx      # Individual task component
-│   └── subtask-list.tsx   # List of subtasks
+│   ├── ui/                   # Shadcn UI components
+│   ├── task-form.tsx         # Form for creating new tasks
+│   ├── task-list.tsx         # List of tasks with filtering
+│   ├── task-item.tsx         # Individual task component
+│   └── subtask-list.tsx      # List of subtasks
 ├── ai/
-│   ├── ai-instance.ts     # Genkit AI instance setup
+│   ├── ai-instance.ts        # Genkit AI instance setup
 │   └── flows/
 │       ├── prioritize-task.ts    # AI task prioritization
 │       ├── suggest-subtasks.ts   # AI subtask suggestion
 │       └── categorize-task.ts    # AI task categorization
-├── lib/
-│   ├── utils.ts           # Utility functions
-│   └── db.ts              # Database access layer
-└── types/
-    └── index.ts           # TypeScript type definitions
+└── lib/
+    ├── db.ts                 # Database connection singleton
+    └── task-service.ts       # Task and category data access
 ```
 
-## 3. AI Implementation [🚧 In Progress]
+## 3. AI Implementation [✅ Done]
 
-### AI Instance Setup
+### AI Instance Setup [✅ Done]
 
-Create `src/ai/ai-instance.ts`: [✅ Done]
-
+Create `src/ai/ai-instance.ts`:
 ```typescript
 'use server';
 
@@ -75,7 +79,7 @@ export const ai = createAI({
 });
 ```
 
-### Task Prioritization Algorithm
+### Task Prioritization Algorithm [✅ Done]
 
 The task prioritization flow in [`src/ai/flows/prioritize-task.ts`](file:///C:/Users/dontb/Documents/repos/to-do-ai/src/ai/flows/prioritize-task.ts) calculates priorities based on:
 
@@ -89,7 +93,7 @@ The prioritization algorithm will be refined to:
 
 *Status: [✅ Done]*
 
-### Subtask Generation
+### Subtask Generation [✅ Done]
 
 Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](to-do-ai/src/ai/flows/suggest-subtasks.ts) to:
 - Take a task description as input
@@ -98,25 +102,15 @@ Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](to
 
 *Status: [✅ Done]*
 
-### Task Categorization
+### Task Categorization [✅ Done]
 
 Implement the automatic categorization flow in `src/ai/flows/categorize-task.ts`:
 
 *Status: [✅ Done]*
 
+## 4. User Interface Implementation [✅ Done]
 
-## 4. User Interface Implementation [🚧 In Progress]
-
-### Main Page
-
-Implement the main todo list page in `src/app/page.tsx` with:
-- Task creation form
-- Task list with sorting and filtering options
-- Task completion functionality
-
-*Status: [🚧 Partially Implemented]*
-
-### Task Form Component
+### Task Form Component [✅ Done]
 
 Create a form component that:
 - Accepts task title, description, deadline, and importance
@@ -125,7 +119,7 @@ Create a form component that:
 
 *Status: [✅ Done]*
 
-### Task List and Item Components
+### Task List and Item Components [✅ Done]
 
 Implement components to:
 - Display tasks sorted by priority
@@ -135,57 +129,193 @@ Implement components to:
 
 *Status: `task-item.tsx` [✅ Created], `task-list.tsx` [✅ Created]. `subtask-list.tsx` and subtask regeneration [🚧 To Do].*
 
-## 5. Database Setup [🚧 In Progress]
+## 5. Database Setup [✅ Done]
 
-### Local Storage Implementation [✅ Done]
+### SQLite Implementation with Connection Singleton [✅ Done]
 
-For data persistence, TaskWise uses browser localStorage, providing several benefits:
+For data persistence, TaskWise uses SQLite with a connection singleton pattern, providing several benefits:
 
-1. **Privacy**: All user data stays on their device, not on a server
-2. **Simplicity**: No database setup required for self-hosting
-3. **Offline Use**: Application remains functional without internet connection
+1. **Cross-Device Access**: Data is stored on the server, making it accessible from any device
+2. **Simplicity**: Minimal database setup with a single file
+3. **Self-Contained**: The database is stored in a single file that can be easily backed up
+4. **Persistent Connection**: A singleton database connection ensures data consistency across requests
 
-The implementation is in `src/lib/storage.ts` and provides the following functionality:
+The implementation is in `src/lib/db.ts` and includes:
 
 ```typescript
-// Key localStorage functions
-getStoredTasks(): Task[] | null        // Retrieve tasks from storage
-saveTasks(tasks: Task[]): boolean      // Save tasks to storage
-getStoredCategoryIcons(): object | null // Retrieve categories and icons
-saveCategoryIcons(icons: object): boolean // Save categories and icons
-clearAllData(): boolean                // Clear all application data
+// Database singleton pattern
+import Database from 'better-sqlite3';
+import fs from 'fs';
+import path from 'path';
+
+// Database connection singleton
+let dbInstance: Database.Database | null = null;
+
+/**
+ * Get a singleton database connection
+ * This ensures we reuse the same connection across all API requests
+ */
+export function getDbConnection(): Database.Database {
+  if (!dbInstance) {
+    // Ensure the data directory exists
+    const DB_DIR = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
+    }
+
+    const DB_PATH = path.join(DB_DIR, 'taskwise.db');
+    
+    // Create database instance
+    dbInstance = new Database(DB_PATH);
+    
+    // Enable foreign keys
+    dbInstance.pragma('foreign_keys = ON');
+    
+    // Initialize tables
+    initDb(dbInstance);
+  }
+  
+  return dbInstance;
+}
 ```
 
-### Future Database Support [🚧 To Do]
+This singleton pattern:
+- Maintains a single database connection across all API requests
+- Prevents issues with multiple connections to the same SQLite file
+- Ensures the database is initialized only once
+- Properly handles database table creation on first run
 
-If server-side persistence is desired in the future, the storage layer is designed to be extensible. Options to consider:
+### API Layer with CORS Support [✅ Done]
 
-1. **Vercel Postgres**: For deployment to Vercel
+TaskWise implements a RESTful API layer that interfaces with the SQLite database and includes CORS support for cross-origin access:
+
+- `GET /api/tasks` - Retrieve all tasks
+- `POST /api/tasks` - Create a new task
+- `GET /api/tasks/:id` - Get a specific task
+- `PUT /api/tasks/:id` - Update a task
+- `DELETE /api/tasks/:id` - Delete a task
+- `PATCH /api/tasks/:id` - Toggle task completion
+- `GET /api/categories` - Get all categories
+- `POST /api/categories` - Create or update a category
+- `DELETE /api/categories?name=categoryName` - Delete a category
+
+Each API endpoint includes:
+- Proper error handling with detailed error messages
+- CORS headers for cross-origin access
+- Request validation
+- Response status codes appropriate to the operation
+
+The API routes are implemented using Next.js API routes in the `src/app/api` directory.
+
+### Client Hooks [✅ Done]
+
+To interact with the API from the frontend, custom React hooks are provided:
+
+- `useTasks` - Hook for task-related operations
+- `useCategories` - Hook for category-related operations
+
+These hooks handle API communication and local state management, making it easy to integrate with UI components.
+
+### Docker Configuration for Persistent Data [✅ Done]
+
+The Docker configuration has been updated to properly support SQLite and ensure data persistence:
+
+```dockerfile
+FROM node:18-alpine
+
+# Install dependencies required for better-sqlite3
+RUN apk add --no-cache python3 make g++ gcc libc-dev
+
+WORKDIR /app
+
+# Create data directory for SQLite
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Copy package files first to leverage Docker caching
+COPY package*.json ./
+RUN npm install
+
+# Copy the rest of the application
+COPY . .
+
+# Build the application
+RUN npm run build
+
+EXPOSE 3000
+
+# Add volume for persistent data
+VOLUME ["/app/data"]
+
+CMD ["npm", "start"]
+```
+
+This Docker configuration:
+- Installs dependencies required for SQLite
+- Creates a data directory with appropriate permissions
+- Mounts a volume to ensure database persistence across container restarts
+- Optimizes the build process with layer caching
+
+## 6. Development Mode Database Persistence [🚧 To Do]
+
+The current database implementation works well in production but has issues in development mode due to Next.js hot reloading. Each time the code changes or the server restarts, the database connection singleton is reset.
+
+### Solution: External Database Connection File [✅ Done]
+
+To fix this issue, we've implemented a standalone database service:
+
+1. **Created a database service using ES modules**:
    ```bash
-   npm install @vercel/postgres
-   ```
-2. **SQLite**: For local development or simple self-hosting
-   ```bash
-   npm install better-sqlite3
-     title TEXT NOT NULL,
-     description TEXT,
-     deadline DATE,
-     importance INTEGER CHECK (importance BETWEEN 1 AND 10),
-     category TEXT,
-     priority_score DECIMAL,
-     is_completed BOOLEAN DEFAULT FALSE,
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-
-   CREATE TABLE subtasks (
-     id SERIAL PRIMARY KEY,
-     task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-     description TEXT NOT NULL,
-     is_completed BOOLEAN DEFAULT FALSE
-   );
+   mkdir -p db
+   touch db/connection.js
    ```
 
-## 6. Server Actions [🚧 To Do]
+   The service is implemented as an ES module (since our project uses `"type": "module"` in package.json) and runs outside the Next.js application lifecycle.
+
+2. **Implemented a Node.js HTTP server for database operations**:
+   ```javascript
+   // db/connection.js
+   import sqlite3 from 'better-sqlite3';
+   import fs from 'fs';
+   import path from 'path';
+   import http from 'http';
+   import { fileURLToPath } from 'url';
+
+   // Get current file path in ESM
+   const __filename = fileURLToPath(import.meta.url);
+   const __dirname = path.dirname(__filename);
+
+   // Initialize database, tables, and HTTP server...
+   ```
+
+3. **Added scripts to package.json for running the service**:
+   ```json
+   "scripts": {
+     "dev": "next dev --turbopack -p 9002",
+     "dev:with-db": "concurrently \"node db/connection.js\" \"next dev --turbopack -p 9002\"",
+     "db:start": "node db/connection.js"
+   }
+   ```
+
+4. **Updated the database client to use the external service in development mode**:
+   In `src/lib/db.ts`, we detect development mode and use fetch API to communicate with the database service instead of direct SQLite connections.
+
+To use the database service in development:
+
+```bash
+# Start both the database service and Next.js
+npm run dev:with-db
+
+# Or start them separately
+npm run db:start
+npm run dev
+```
+
+This approach:
+- Maintains a persistent database connection outside Next.js's module system
+- Works consistently in both development and production environments
+- Allows for proper data persistence across hot reloads
+
+## 7. Server Actions [🚧 To Do]
 
 Implement server actions for database operations:
 
@@ -220,7 +350,7 @@ export async function createTask(formData: FormData) {
 }
 ```
 
-## 7. Testing
+## 8. Testing
 
 1. **Unit Tests**:
    ```bash
@@ -233,7 +363,7 @@ export async function createTask(formData: FormData) {
 3. **Test UI Components**:
    Test key components like task creation form and task list.
 
-## 8. Deployment to Vercel
+## 9. Deployment to Vercel
 
 1. **Push to GitHub**:
    ```bash
@@ -261,7 +391,7 @@ export async function createTask(formData: FormData) {
    - Check logs for any deployment issues
    - Set up usage alerts for the database and AI API
 
-## 9. Post-Deployment Tasks
+## 10. Post-Deployment Tasks
 
 1. **Set Up Analytics**:
    - Implement Vercel Analytics to track usage patterns
@@ -270,8 +400,7 @@ export async function createTask(formData: FormData) {
    - Use the Next.js built-in performance analysis tools
    - Implement caching for AI requests to reduce API usage
 
-## 10. Future Enhancements
-
+## 11. Future Enhancements
 
 1. **User-defined importance**
    - Allow option to manually set importance to influence priority score (1-10 scale)

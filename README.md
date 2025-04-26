@@ -8,6 +8,7 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 - **Smart Categorization**: Automatically categorizes tasks based on content
 - **Subtask Suggestions**: AI generates relevant subtasks to help break down complex tasks
 - **Task Management**: Create, edit, complete, and delete tasks with an intuitive interface
+- **Cross-Device Sync**: Access your tasks from any device by connecting to your self-hosted server
 
 ## 🛠️ Technology Stack
 
@@ -15,6 +16,7 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 - [Genkit](https://genkit.ai/) with [Google Gemini API](https://ai.google.dev/gemini-api) - AI framework for task prioritization and subtask generation
 - [Shadcn UI](https://ui.shadcn.com/) - Component library for the user interface
 - [date-fns](https://date-fns.org/) - Date manipulation library
+- [SQLite](https://www.sqlite.org/) - Lightweight database for task storage
 
 ## 🚀 Getting Started
 
@@ -53,13 +55,16 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-## 🔒 Privacy-First Approach
+## 🔒 Data Storage Approach
 
-TaskWise uses browser localStorage for task persistence, which means:
+TaskWise now uses SQLite for task persistence, which means:
 
-- **Data Privacy**: All your task data remains on your device and is never sent to a server
-- **No Database Required**: Self-hosting is simple with no database configuration
-- **Offline Capability**: The app works even when offline (after initial load)
+- **Self-Hosted**: All your task data remains on your server, not in the browser
+- **Cross-Device Sync**: Access your tasks from any device by connecting to your self-hosted instance
+- **Data Persistence**: Your data is safely stored in a SQLite database file on your server
+- **Simple Setup**: No complex database configuration required - SQLite works out of the box
+
+The SQLite database is stored in the `data/taskwise.db` file in your project directory.
 
 ## 🏠 Self-Hosting Guide
 
@@ -105,8 +110,10 @@ CMD ["npm", "start"]
 Build and run with:
 ```bash
 docker build -t taskwise .
-docker run -p 3000:3000 -e GOOGLE_AI_API_KEY=your_key_here taskwise
+docker run -p 3000:3000 -e GOOGLE_AI_API_KEY=your_key_here -v ./data:/app/data taskwise
 ```
+
+> **Note**: The `-v ./data:/app/data` flag creates a volume to persist your database outside the container.
 
 #### Using Docker Compose
 
@@ -132,16 +139,7 @@ export GOOGLE_AI_API_KEY=your_key_here
 docker-compose up -d
 ```
 
-This method handles environment variables, port mapping, and container lifecycle management automatically.
-
-## 💾 Data Storage
-
-TaskWise uses browser localStorage for persisting:
-- Tasks and subtasks
-- Custom categories and emoji icons
-- Task priority calculations
-
-This approach prioritizes user privacy while ensuring your data remains accessible across browser sessions. If you clear your browser data, your tasks will be reset, so consider periodic exports if needed.
+This method handles environment variables, port mapping, volume mounting, and container lifecycle management automatically.
 
 ## 🧠 AI Features Explained
 
