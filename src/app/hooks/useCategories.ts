@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Category } from '../types';
 
+// API base URL - should match the database service
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100';
+
 export default function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -8,16 +11,20 @@ export default function useCategories() {
 
   // Fetch all categories
   const fetchCategories = async () => {
+    const apiUrl = `${API_BASE_URL}/api/categories`;
+    console.log('[useCategories] Fetching categories from:', apiUrl);
     setLoading(true);
     try {
-      const response = await fetch('/api/categories');
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error('Failed to fetch categories');
       }
       const data = await response.json();
+      console.log('[useCategories] Received categories:', data);
       setCategories(data);
       setError(null);
     } catch (err) {
+      console.error('[useCategories] Error fetching categories:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -26,8 +33,10 @@ export default function useCategories() {
 
   // Create or update a category
   const saveCategory = async (category: Category) => {
+    const apiUrl = `${API_BASE_URL}/api/categories`;
+    console.log('[useCategories] Saving category at:', apiUrl, category);
     try {
-      const response = await fetch('/api/categories', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,6 +49,7 @@ export default function useCategories() {
       }
 
       const savedCategory = await response.json();
+      console.log('[useCategories] Category saved:', savedCategory);
       
       // Update local state - add or replace existing category
       setCategories(prev => {
@@ -53,6 +63,7 @@ export default function useCategories() {
       
       return savedCategory;
     } catch (err) {
+      console.error('[useCategories] Error saving category:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       throw err;
     }
@@ -60,8 +71,10 @@ export default function useCategories() {
 
   // Delete a category
   const deleteCategory = async (name: string) => {
+    const apiUrl = `${API_BASE_URL}/api/categories?name=${encodeURIComponent(name)}`;
+    console.log('[useCategories] Deleting category at:', apiUrl);
     try {
-      const response = await fetch(`/api/categories?name=${encodeURIComponent(name)}`, {
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
       });
 
@@ -69,9 +82,11 @@ export default function useCategories() {
         throw new Error('Failed to delete category');
       }
 
+      console.log('[useCategories] Category deleted successfully');
       setCategories(prev => prev.filter(category => category.name !== name));
       return true;
     } catch (err) {
+      console.error('[useCategories] Error deleting category:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       throw err;
     }

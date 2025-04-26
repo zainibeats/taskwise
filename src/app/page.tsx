@@ -2,6 +2,7 @@
 
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
 import { getStoredTasks, saveTasks, getStoredCategoryIcons, saveCategoryIcons, getStoredCustomCategories, saveCustomCategories } from "@/lib/storage";
+import { TaskApi, CategoryApi } from "@/lib/api-client"; // Import API client
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
 import { useCategoryActions } from "./hooks/useCategoryActions";
@@ -53,16 +54,16 @@ import type { Task, Subtask } from "./types/task";
 
 const defaultTasks: Task[] = [
   {
-    id: "1",
+    id: "default-1",
     title: "Explore TaskWise features",
     description: "Get acquainted with TaskWise's capabilities",
     category: "Other",
     priority: 50,
     deadline: new Date("2025-08-01"),
     subtasks: [
-      { id: "1a", title: "Explore categories", completed: false },
-      { id: "1b", title: "Create custom category", completed: false },
-      { id: "1c", title: "Explore subtasks auto-generation", completed: false },
+      { id: "default-1-subtask-a", title: "Explore categories", completed: false },
+      { id: "default-1-subtask-b", title: "Create custom category", completed: false },
+      { id: "default-1-subtask-c", title: "Explore subtasks auto-generation", completed: false },
     ],
     completed: false,
   },
@@ -87,6 +88,10 @@ const initialCategoryIcons: { [key: string]: string } = {
 
 // Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
 export default function Home() {
+  // Debug logging for environment variables
+  console.log("[DEBUG] API URL from env:", process.env.NEXT_PUBLIC_API_URL);
+  console.log("[DEBUG] API Base URL:", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
+  
   // List of built-in categories (cannot be deleted by user)
   const builtInCategories = [
     "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
@@ -96,26 +101,91 @@ export default function Home() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
   // Undo/Redo state and logic for task history
-// history: stores snapshots of task lists for undo/redo
-// historyIndex: current position in history stack
+  // history: stores snapshots of task lists for undo/redo
+  // historyIndex: current position in history stack
   const [history, setHistory] = useState<Task[][]>([defaultTasks]); // Start with defaultTasks to prevent undefined
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true); // Add loading state to handle initialization period
   const { toast } = useToast();
   
-  // Initialize tasks from localStorage or use default tasks
+  // Initialize tasks from API instead of localStorage
   useEffect(() => {
-    const storedTasks = getStoredTasks();
-    if (storedTasks && storedTasks.length > 0) {
-      setHistory([storedTasks]);
-      setHistoryIndex(0);
-      toast({ title: "Tasks loaded from localStorage" });
+    async function loadTasks() {
+      try {
+        console.log("[DEBUG] Fetching tasks from API...");
+        const apiTasks = await TaskApi.getAllTasks();
+        console.log("[DEBUG] API tasks received:", apiTasks);
+        
+        if (apiTasks && apiTasks.length > 0) {
+          // Use the API tasks
+          setHistory([apiTasks]);
+          setHistoryIndex(0);
+          toast({ title: "Tasks loaded from database" });
+        } else {
+          console.log("[DEBUG] No tasks from API, using localStorage fallback");
+          const storedTasks = getStoredTasks();
+          if (storedTasks && storedTasks.length > 0) {
+            // Check for potential ID conflicts and ensure unique keys
+            const uniqueStoredTasks = storedTasks.map(task => {
+              // If task ID is a simple numeric string (like "1"), add a prefix
+              if (/^\d+$/.test(task.id)) {
+                return {
+                  ...task,
+                  id: `local-${task.id}`,
+                  // Also update subtask IDs
+                  subtasks: task.subtasks?.map(subtask => ({
+                    ...subtask,
+                    id: `local-${subtask.id}`,
+                    task_id: `local-${task.id}`
+                  })) || []
+                };
+              }
+              return task;
+            });
+            
+            setHistory([uniqueStoredTasks]);
+            setHistoryIndex(0);
+            toast({ title: "Tasks loaded from localStorage" });
+          } else {
+            // If no tasks in localStorage, use default tasks
+            console.log("[DEBUG] Using default tasks");
+          }
+        }
+      } catch (error) {
+        console.error("[DEBUG] Error loading tasks from API:", error);
+        // Fallback to localStorage
+        const storedTasks = getStoredTasks();
+        if (storedTasks && storedTasks.length > 0) {
+          // Ensure unique IDs
+          const uniqueStoredTasks = storedTasks.map(task => {
+            if (/^\d+$/.test(task.id)) {
+              return {
+                ...task,
+                id: `local-${task.id}`,
+                subtasks: task.subtasks?.map(subtask => ({
+                  ...subtask,
+                  id: `local-${subtask.id}`,
+                  task_id: `local-${task.id}`
+                })) || []
+              };
+            }
+            return task;
+          });
+          
+          setHistory([uniqueStoredTasks]);
+          setHistoryIndex(0);
+          toast({ title: "Tasks loaded from localStorage (API error)" });
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
-    setIsLoading(false); // Mark loading as complete regardless of outcome
+    
+    loadTasks();
   }, []);
 
   // Custom undo/redo hook for tasks
-// Provides tasks, canUndo/canRedo, and history manipulation functions
+  // Provides tasks, canUndo/canRedo, and history manipulation functions
   const {
     tasks,
     canUndo,
@@ -131,25 +201,30 @@ export default function Home() {
     toast,
   });
   
-  // Wrap pushHistory to also save to localStorage
-  const pushHistory = (newTasksState: Task[]) => {
+  // Wrap pushHistory to save to both API and localStorage
+  const pushHistory = async (newTasksState: Task[]) => {
     originalPushHistory(newTasksState);
+    // Save to localStorage as fallback
     saveTasks(newTasksState);
+    
+    // We could also update the API here if needed
+    // This would require mapping added/updated/deleted tasks and calling respective API methods
+    console.log("[DEBUG] Tasks updated in state:", newTasksState);
   };
 
   // Loading state for AI operations (separate from initial data loading)
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   // State for editing tasks, alert dialogs, and temporary task data
-// editingTaskId: which task is being edited
-// isAlertOpen: controls alert dialog visibility
-// tempTask: holds a task being temporarily modified or confirmed for deletion
+  // editingTaskId: which task is being edited
+  // isAlertOpen: controls alert dialog visibility
+  // tempTask: holds a task being temporarily modified or confirmed for deletion
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [tempTask, setTempTask] = useState<Task | null>(null);
 
   // All task-related actions (CRUD, completion, edit, discard) from custom hook
-// Provides handlers for task completion, editing, deletion, and discard confirmation/cancellation
+  // Provides handlers for task completion, editing, deletion, and discard confirmation/cancellation
   const {
     handleTaskCompletion,
     handleSubtaskCompletion,
@@ -168,7 +243,7 @@ export default function Home() {
   });
 
   // All category-related state and actions (custom categories, emoji picker, etc.)
-// Manages custom categories, emoji selection, category creation/deletion, and related UI state
+  // Manages custom categories, emoji selection, category creation/deletion, and related UI state
   // Load stored category icons
   const [loadedCategoryIcons, setLoadedCategoryIcons] = useState(initialCategoryIcons);
   
@@ -261,7 +336,7 @@ export default function Home() {
   }, [categoryIconsState]);
 
   // Date picker state and logic from custom hook
-// Handles selected date, clearing, and today check
+  // Handles selected date, clearing, and today check
   const {
     selectedDate, setSelectedDate, handleClearDate, isToday
   } = useDatePicker(new Date());
@@ -277,7 +352,7 @@ export default function Home() {
     // Gather all categories (built-in + custom)
     const allCategories = Object.keys(categoryIconsState);
     const newTask: Task = {
-      id: Date.now().toString(),
+      id: Date.now().toString(), // Will be replaced by database-generated ID
       title: newTaskTitle,
       completed: false,
       category: taskCategory, // Assign potentially undefined category initially
@@ -301,7 +376,7 @@ export default function Home() {
       const categoryForPrioritization = newTask.category || "Other";
 
       // --- AI Prioritization & Subtasks ---
-// Run AI flows for priority score and subtask suggestions in parallel
+      // Run AI flows for priority score and subtask suggestions in parallel
       const [priorityResult, subtasksResult] = await Promise.all([
         prioritizeTask({
           task: newTask.title,
@@ -322,8 +397,25 @@ export default function Home() {
         completed: false,
       }));
 
-      // Add task to state and history (using pushHistory for undo/redo support)
-      pushHistory([...tasks, newTask]); // Use pushHistory
+      console.log("[DEBUG] Attempting to create task in database:", newTask);
+      
+      // Save task to database using API
+      try {
+        const createdTask = await TaskApi.createTask(newTask);
+        if (createdTask) {
+          console.log("[DEBUG] Task created in database:", createdTask);
+          // Use the returned task with database ID
+          pushHistory([...tasks, createdTask]);
+        } else {
+          console.error("[DEBUG] Failed to create task in database, falling back to local only");
+          // Fallback to local state only
+          pushHistory([...tasks, newTask]);
+        }
+      } catch (apiError) {
+        console.error("[DEBUG] API error creating task:", apiError);
+        // Fallback to local state only if API fails
+        pushHistory([...tasks, newTask]);
+      }
 
       // Reset form inputs for next task entry
       setNewTaskTitle("");
@@ -334,12 +426,11 @@ export default function Home() {
         title: "Task added successfully!",
         description: `"${newTask.title}" has been added to your list.`,
       });
-    } catch (error) {
-      console.error("Error processing task:", error);
+    } catch (err) {
+      console.error("Error adding task:", err);
       toast({
-        variant: "destructive",
-        title: "Error adding task",
-        description: "Failed to process task. Please try again.",
+        title: "Failed to add task",
+        description: "An error occurred while processing your task.",
       });
     } finally {
       setIsAiLoading(false);
@@ -348,7 +439,7 @@ export default function Home() {
 
 
   // Function to determine border color class based on priority
-// Returns a CSS class for border color based on priority score
+  // Returns a CSS class for border color based on priority score
   function getPriorityBorderClass(priority: number | undefined): string {
     if (!priority || priority <= 50) return "border-accent"; // Low priority (<= 50) -> Green (Accent)
     if (priority <= 75) return "border-warning"; // Medium priority (> 50 and <= 75) -> Yellow (Warning)
@@ -369,7 +460,7 @@ export default function Home() {
   ];
 
   // (category and emoji logic moved to useCategoryActions)
-// (date picker logic moved to useDatePicker)
+  // (date picker logic moved to useDatePicker)
   // (date picker logic moved to useDatePicker)
 
 
