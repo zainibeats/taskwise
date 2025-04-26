@@ -79,128 +79,17 @@ The SQLite database is stored in the `data/taskwise.db` file in your project dir
 
 ## 🏠 Self-Hosting Guide
 
-### For Personal Use (Simplest)
+TaskWise can be self-hosted on your own server. For detailed instructions, see the [comprehensive self-hosting guide](docs/self-hosting-guide.md) which covers:
 
-1. Follow the installation steps above
-2. Build the application for production:
-   ```bash
-   npm run build
-   # or
-   yarn build
-   ```
-3. Start the production server:
-   ```bash
-   npm start
-   # or
-   yarn start
-   ```
+- Docker Compose setup (recommended)
+- Direct Docker deployment
+- Cross-device database access configuration
+- Troubleshooting common issues
+- Domain name setup
+- Security considerations
+- Data backup strategies
 
-### For Team/Organization Deployment
-
-1. Fork the repository on GitHub
-2. Deploy to Vercel, Netlify, or any static hosting service that supports Next.js
-3. Set the `GOOGLE_AI_API_KEY` environment variable in your hosting provider's settings
-
-### Docker Deployment (Recommended)
-
-#### Using Dockerfile
-
-A `Dockerfile` is included for building a Docker image:
-
-```dockerfile
-FROM node:18-alpine
-
-# Install dependencies required for better-sqlite3
-RUN apk add --no-cache python3 make g++ gcc libc-dev
-
-WORKDIR /app
-
-# Create necessary directories
-RUN mkdir -p /app/data /app/logs && chmod 777 /app/data /app/logs
-
-COPY . .
-RUN npm install
-RUN npm run build
-
-# Expose both app and DB service ports
-EXPOSE 3000 3100
-
-# Start both the database service and Next.js app
-CMD ["sh", "-c", "node db/connection.js & npm start"]
-```
-
-Build and run with:
-```bash
-docker build -t taskwise .
-docker run -p 3000:3000 -p 3100:3100 -e GOOGLE_AI_API_KEY=your_key_here -v ./data:/app/data taskwise
-```
-
-> **Note**: The `-v ./data:/app/data` flag creates a volume to persist your database outside the container.
-
-#### Using Docker Compose
-
-For a more streamlined setup, use the provided `docker-compose.yml`:
-
-```powershell
-# Set your Google AI API key in the environment (Windows PowerShell)
-$env:GOOGLE_AI_API_KEY="your_key_here"
-
-# Start the application
-docker-compose up -d
-
-# To stop the application
-docker-compose down
-```
-
-For bash/Linux/macOS:
-```bash
-# Set your Google AI API key in the environment
-export GOOGLE_AI_API_KEY=your_key_here
-
-# Start the application
-docker-compose up -d
-```
-
-This method automatically handles:
-- Environment variables (Google AI API key)
-- Port mapping (3000 for web app, 3100 for database service)
-- Volume mounting for data persistence
-- Container lifecycle management
-- Starting both the database service and web application
-
-### ⚠️ Important: Cross-Device Database Access
-
-When accessing TaskWise from devices other than the host server, you must configure the API URL correctly:
-
-1. Modify the `NEXT_PUBLIC_API_URL` to use your server's actual IP address or hostname instead of localhost:
-
-   ```
-   # In your .env file
-   NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
-   ```
-
-2. When using Docker, you must rebuild the container with this environment variable:
-
-   ```yaml
-   # In docker-compose.yml
-   services:
-     taskwise:
-       build:
-         context: .
-         dockerfile: Dockerfile
-         args:
-           - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
-   ```
-
-3. For remote access to work properly, rebuild your Docker containers with:
-
-   ```bash
-   docker-compose down
-   docker-compose build --no-cache
-   docker-compose up -d
-   ```
-
-Without this configuration, remote devices will default to using localStorage instead of the database service.
+The most important thing to remember when self-hosting is to configure the `NEXT_PUBLIC_API_URL` with your server's actual IP address or hostname to ensure cross-device database access works properly.
 
 ## 🧠 AI Features Explained
 
