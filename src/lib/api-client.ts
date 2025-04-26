@@ -301,17 +301,26 @@ export const CategoryApi = {
     const url = `${API_BASE_URL}/api/categories?name=${encodeURIComponent(name)}`;
     console.log("[API] Using API URL:", url);
     try {
+      console.log("[API] Making DELETE request to:", url);
       const response = await fetch(url, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
+      console.log("[API] Delete category response:", response);
       console.log("[API] Delete category response status:", response.status);
+      
       if (!response.ok) {
         console.error("[API] Delete category response not OK:", response.status, response.statusText);
-        throw new Error(`Failed to delete category: ${response.status}`);
+        const errorText = await response.text();
+        console.error("[API] Error response body:", errorText);
+        throw new Error(`Failed to delete category: ${response.status} - ${errorText}`);
       }
 
-      console.log("[API] Category deleted successfully:", name);
+      const result = await response.json();
+      console.log("[API] Category deleted successfully:", name, "Response:", result);
       return true;
     } catch (error) {
       console.error('[API] Error deleting category:', error);

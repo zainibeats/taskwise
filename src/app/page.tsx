@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
-import { getStoredTasks, saveTasks, getStoredCategoryIcons, saveCategoryIcons, getStoredCustomCategories, saveCustomCategories } from "@/lib/storage";
+import { getStoredTasks, saveTasks } from "@/lib/storage";
 import { TaskApi, CategoryApi } from "@/lib/api-client"; // Import API client
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
@@ -275,50 +275,18 @@ export default function Home() {
             description: `Loaded ${Object.keys(apiCategories).length} categories`
           });
         } else {
-          console.log('[DEBUG] No categories from API, checking localStorage');
-          
-          // Then, get custom categories from localStorage as fallback
-          const storedCustomCategories = getStoredCustomCategories();
-          console.log('[PAGE] Custom categories from storage:', storedCustomCategories);
-          
-          if (storedCustomCategories && Object.keys(storedCustomCategories).length > 0) {
-            console.log('[PAGE] Found stored custom categories, merging with defaults');
-            // Merge custom categories with built-in ones
-            Object.entries(storedCustomCategories).forEach(([category, icon]) => {
-              categoryIconsToLoad[category] = icon;
-              console.log(`[PAGE] Added custom category: ${category} with emoji: ${icon}`);
-            });
-            
-            toast({ 
-              title: "Custom categories loaded from localStorage", 
-              description: `Loaded ${Object.keys(storedCustomCategories).length} custom categories`
-            });
-          } else {
-            console.log('[PAGE] No custom categories found in storage');
-          }
-          
-          console.log('[PAGE] Final categories to load:', categoryIconsToLoad);
+          console.log('[DEBUG] No categories from API, using default built-in categories');
           setLoadedCategoryIcons(categoryIconsToLoad);
         }
       } catch (error) {
         console.error('[DEBUG] Error loading categories from API:', error);
-        
-        // Fall back to localStorage
-        const storedCustomCategories = getStoredCustomCategories();
-        if (storedCustomCategories && Object.keys(storedCustomCategories).length > 0) {
-          console.log('[PAGE] Found stored custom categories, merging with defaults');
-          // Merge custom categories with built-in ones
-          Object.entries(storedCustomCategories).forEach(([category, icon]) => {
-            categoryIconsToLoad[category] = icon;
-          });
-          
-          toast({ 
-            title: "Custom categories loaded from localStorage (API error)", 
-            description: `Loaded ${Object.keys(storedCustomCategories).length} custom categories`
-          });
-          
-          setLoadedCategoryIcons(categoryIconsToLoad);
-        }
+        console.log('[DEBUG] Using default built-in categories due to API error');
+        setLoadedCategoryIcons(categoryIconsToLoad);
+        toast({ 
+          title: "Error loading custom categories", 
+          description: "Using default categories only",
+          variant: "destructive"
+        });
       }
     }
     
@@ -346,73 +314,84 @@ export default function Home() {
   const handleCreateCategory = async (category: string, emoji: string) => {
     console.log(`[DEBUG] Creating category: ${category} with emoji: ${emoji}`);
     
-    // First update UI state
-    const updatedIcons = { ...categoryIconsState, [category]: emoji };
-    setCategoryIconsState(updatedIcons);
-    setSelectedCategory(category);
-    
-    // Save to localStorage as fallback
-    saveCategoryIcons(updatedIcons);
-    saveCustomCategories(updatedIcons, builtInCategories);
-    
     // Save to database using API
     try {
       const success = await CategoryApi.saveCategory(category, emoji);
       if (success) {
         console.log(`[DEBUG] Category "${category}" saved to database successfully`);
+        
+        // Update UI state after successful API call
+        const updatedIcons = { ...categoryIconsState, [category]: emoji };
+        setCategoryIconsState(updatedIcons);
+        setSelectedCategory(category);
+        
         toast({ title: "Custom category created", description: `${emoji} ${category}` });
       } else {
         console.error(`[DEBUG] Failed to save category "${category}" to database`);
-        // Still show toast as the UI is updated even if database fails
-        toast({ title: "Custom category created (local only)", description: `${emoji} ${category}` });
+        toast({ 
+          title: "Failed to create category", 
+          description: "The operation couldn't be completed",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error(`[DEBUG] Error saving category "${category}" to database:`, error);
-      toast({ title: "Custom category created (local only)", description: `${emoji} ${category}` });
+      toast({ 
+        title: "Error creating category", 
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
     }
   };
   
   const handleDeleteCategory = async (category: string) => {
     console.log(`[PAGE] Deleting custom category: ${category}`);
-    originalHandleDeleteCategory(category);
-    
-    console.log('[PAGE] Category state before delete update:', categoryIconsState);
-    const updatedIcons = { ...categoryIconsState };
-    delete updatedIcons[category];
-    console.log('[PAGE] Updated icons after category deletion:', updatedIcons);
-    
-    // Save to localStorage as fallback
-    saveCategoryIcons(updatedIcons);
-    saveCustomCategories(updatedIcons, builtInCategories);
     
     // Delete from database using API
     try {
       const success = await CategoryApi.deleteCategory(category);
       if (success) {
+        // Update the state only after successful API call
         console.log(`[DEBUG] Category "${category}" deleted from database successfully`);
+        
+        // Then update local state
+        setCategoryIconsState(prevState => {
+          const newState = { ...prevState };
+          delete newState[category];
+          return newState;
+        });
+        
+        // Update tasks with this category to 'Other'
+        const updatedTasks = tasks.map(task =>
+          task.category === category ? { ...task, category: "Other" } : task
+        );
+        
+        // Update task state
+        pushHistory(updatedTasks);
+        
+        // Also clear selected category if it was the deleted one
+        if (selectedCategory === category) {
+          setSelectedCategory(undefined);
+        }
+        
         toast({ title: "Custom category deleted", description: category });
       } else {
         console.error(`[DEBUG] Failed to delete category "${category}" from database`);
-        toast({ title: "Custom category deleted (local only)", description: category });
+        toast({ 
+          title: "Failed to delete category", 
+          description: "The operation couldn't be completed", 
+          variant: "destructive" 
+        });
       }
     } catch (error) {
       console.error(`[DEBUG] Error deleting category "${category}" from database:`, error);
-      toast({ title: "Custom category deleted (local only)", description: category });
+      toast({ 
+        title: "Error deleting category", 
+        description: "An unexpected error occurred", 
+        variant: "destructive" 
+      });
     }
   };
-  
-  // Save category icons when they change
-  useEffect(() => {
-    console.log('[PAGE] Category icons state changed:', categoryIconsState);
-    
-    if (Object.keys(categoryIconsState).length > 0) {
-      console.log('[PAGE] Saving updated category icons to storage');
-      saveCategoryIcons(categoryIconsState);
-      
-      // Also save custom categories separately
-      saveCustomCategories(categoryIconsState, builtInCategories);
-    }
-  }, [categoryIconsState]);
 
   // Date picker state and logic from custom hook
   // Handles selected date, clearing, and today check
@@ -696,19 +675,18 @@ export default function Home() {
                     .map(([category, icon]) => (
                       <div key={category} className="flex items-center justify-between p-2 rounded hover:bg-muted">
                         <span className="flex items-center gap-2">{icon} {category}</span>
-                        <AlertDialogAction
-                          asChild
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          aria-label={`Delete ${category}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteCategory(category);
+                          }}
                         >
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            aria-label={`Delete ${category}`}
-                            onClick={() => handleDeleteCategory(category)}
-                          >
-                            <Icons.trash className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogAction>
+                          <Icons.trash className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
                 </div>

@@ -60,20 +60,27 @@ export async function DELETE(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const name = url.searchParams.get('name');
+    console.log('Delete category request received for name:', name);
     
     if (!name) {
+      console.log('Category name is missing in request');
       return setCorsHeaders(
         NextResponse.json({ error: 'Category name is required' }, { status: 400 })
       );
     }
     
+    console.log(`Attempting to delete category "${name}"`);
     const success = await categoryService.deleteCategory(name);
+    console.log(`Delete operation result for "${name}":`, success);
+    
     if (!success) {
+      console.log(`Category "${name}" not found for deletion`);
       return setCorsHeaders(
         NextResponse.json({ error: 'Category not found' }, { status: 404 })
       );
     }
     
+    console.log(`Category "${name}" deleted successfully`);
     return setCorsHeaders(NextResponse.json({ success: true }));
   } catch (error) {
     console.error('Error deleting category:', error);
