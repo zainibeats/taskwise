@@ -168,6 +168,40 @@ This method automatically handles:
 - Container lifecycle management
 - Starting both the database service and web application
 
+### ⚠️ Important: Cross-Device Database Access
+
+When accessing TaskWise from devices other than the host server, you must configure the API URL correctly:
+
+1. Modify the `NEXT_PUBLIC_API_URL` to use your server's actual IP address or hostname instead of localhost:
+
+   ```
+   # In your .env file
+   NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
+   ```
+
+2. When using Docker, you must rebuild the container with this environment variable:
+
+   ```yaml
+   # In docker-compose.yml
+   services:
+     taskwise:
+       build:
+         context: .
+         dockerfile: Dockerfile
+         args:
+           - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
+   ```
+
+3. For remote access to work properly, rebuild your Docker containers with:
+
+   ```bash
+   docker-compose down
+   docker-compose build --no-cache
+   docker-compose up -d
+   ```
+
+Without this configuration, remote devices will default to using localStorage instead of the database service.
+
 ## 🧠 AI Features Explained
 
 ### Task Prioritization
