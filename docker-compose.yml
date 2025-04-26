@@ -6,7 +6,7 @@ services:
       args:
         # IMPORTANT FOR SELF-HOSTING: 
         # Replace this with your server's actual IP address or hostname
-        # Example: http://192.168.1.151:3100 or http://taskwise.example.com:3100
+        # Example: http://192.168.1.10:3100 or http://taskwise.example.com:3100
         - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
     ports:
       - "3000:3000"  # Web UI
