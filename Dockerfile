@@ -18,7 +18,13 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
+# Define build argument for API URL
+# This must be passed in docker-compose.yml or docker build command
+ARG NEXT_PUBLIC_API_URL=http://localhost:3100
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 # Build the application
+# The NEXT_PUBLIC_* variables are embedded during this step
 RUN npm run build
 
 # Expose both app port and database service port
@@ -26,7 +32,7 @@ EXPOSE 3000 3100
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_API_URL=http://localhost:3100
+# NEXT_PUBLIC_API_URL is now handled via ARG/ENV above
 
 # Add volume for persistent data
 VOLUME ["/app/data"]

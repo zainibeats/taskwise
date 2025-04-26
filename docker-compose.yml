@@ -3,14 +3,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # IMPORTANT FOR SELF-HOSTING: 
+        # Replace this with your server's actual IP address or hostname
+        # Example: http://192.168.1.151:3100 or http://taskwise.example.com:3100
+        - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
     ports:
-      - "3000:3000"
-      - "3100:3100"
+      - "3000:3000"  # Web UI
+      - "3100:3100"  # Database API
     environment:
       - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:3100
     restart: unless-stopped
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - ./data:/app/data  # Persists your database
+      - ./logs:/app/logs  # Stores logs outside the container
