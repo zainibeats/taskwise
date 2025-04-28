@@ -25,23 +25,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # Uncomment to add a reverse proxy with SSL
-  # traefik:
-  #   image: traefik:v2.9
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"      # HTTP
-  #     - "443:443"    # HTTPS
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-  #     - ./traefik/config:/etc/traefik/config:ro
-  #     - ./traefik/acme:/etc/traefik/acme
-  #   labels:
-  #     - "traefik.enable=true"
-  #   # Uncomment to use with Traefik:
-  #   # In this case, change NEXT_PUBLIC_API_URL to https://api.yourdomain.com
-
 # Use named volumes for better portability across systems
 volumes:
   taskwise-data:
