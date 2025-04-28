@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyUserPassword } from '@/lib/user-config';
-import { createSession, setSessionCookie } from '@/lib/session';
+import { createSession } from '@/lib/session';
+
+// Session cookie name - must match the one in session.ts
+const SESSION_COOKIE_NAME = 'taskwise_session';
+// Session expiration time in milliseconds (24 hours)
+const SESSION_EXPIRY = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,8 +45,21 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
     
-    // Set the session cookie using the async helper function
-    await setSessionCookie(sessionId);
+    // Calculate expiration
+    const expires = new Date(Date.now() + SESSION_EXPIRY);
+    
+    // Set the cookie directly on the response
+    response.cookies.set({
+      name: SESSION_COOKIE_NAME,
+      value: sessionId,
+      expires,
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    
+    console.log(`[DEBUG] Session cookie set: ${SESSION_COOKIE_NAME}=${sessionId}`);
     
     return response;
   } catch (error) {
