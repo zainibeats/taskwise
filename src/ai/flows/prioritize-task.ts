@@ -7,7 +7,7 @@
  * - PrioritizeTaskOutput - The return type for the prioritizeTask function.
  */
 
-import {ai} from '@/ai/ai-instance';
+import { getAI } from '@/ai/ai-instance';
 import {z} from 'genkit';
 // Keep date-fns imports if needed elsewhere, or remove if only used for the deleted calculation
 // import { isPast, format, parseISO, differenceInDays } from 'date-fns';
@@ -27,27 +27,28 @@ const PrioritizeTaskOutputSchema = z.object({
 export type PrioritizeTaskOutput = z.infer<typeof PrioritizeTaskOutputSchema>;
 
 export async function prioritizeTask(input: PrioritizeTaskInput): Promise<PrioritizeTaskOutput> {
-  // Add input validation if necessary
-  return prioritizeTaskFlow(input);
-}
-
-const prioritizeTaskPrompt = ai.definePrompt({
-  name: 'prioritizeTaskPrompt',
-  input: { // Input schema now only needs the original task details
-    schema: z.object({
-      task: z.string().describe('The task to prioritize.'),
-      deadline: z.string().describe('The deadline for the task (e.g., YYYY-MM-DD).'),
-      importance: z.number().describe('The user-defined importance of the task (1-10, 10 being most important).'),
-      category: z.string().describe('The category of the task (e.g., Work, Personal, Health).'),
-    }),
-  },
-  output: { // Output schema remains the same
-    schema: z.object({
-      priorityScore: z.number().describe('The calculated priority score for the task (1-100).'),
-      reasoning: z.string().describe('The AI reasoning behind the assigned priority score.'),
-    }),
-  },
-  prompt: `You are an AI task prioritization expert. Calculate a final priority score (1-100, 100 being highest priority) for the given task and explain your reasoning.
+  try {
+    // Get the current AI instance with the latest API key
+    const ai = getAI();
+    
+    // Define the flow and prompt inside the function to use the current AI instance
+    const prioritizeTaskPrompt = ai.definePrompt({
+      name: 'prioritizeTaskPrompt',
+      input: {
+        schema: z.object({
+          task: z.string().describe('The task to prioritize.'),
+          deadline: z.string().describe('The deadline for the task (e.g., YYYY-MM-DD).'),
+          importance: z.number().describe('The user-defined importance of the task (1-10, 10 being most important).'),
+          category: z.string().describe('The category of the task (e.g., Work, Personal, Health).'),
+        }),
+      },
+      output: {
+        schema: z.object({
+          priorityScore: z.number().describe('The calculated priority score for the task (1-100).'),
+          reasoning: z.string().describe('The AI reasoning behind the assigned priority score.'),
+        }),
+      },
+      prompt: `You are an AI task prioritization expert. Calculate a final priority score (1-100, 100 being highest priority) for the given task and explain your reasoning.
 
 Consider these factors:
 1.  **User Importance (1-10):** This is the primary driver. A base score can be derived from this (e.g., importance * 8 or importance * 9).
@@ -68,27 +69,35 @@ Importance: {{{importance}}}
 Category: {{{category}}}
 
 Generate the priorityScore and reasoning.`,
-});
+    });
 
-const prioritizeTaskFlow = ai.defineFlow<
-  typeof PrioritizeTaskInputSchema,
-  typeof PrioritizeTaskOutputSchema
->(
-  {
-    name: 'prioritizeTaskFlow',
-    inputSchema: PrioritizeTaskInputSchema,
-    outputSchema: PrioritizeTaskOutputSchema,
-  },
-  async input => {
-    // No calculation logic needed here anymore
-    const { output } = await prioritizeTaskPrompt(input); // Pass input directly to the prompt
+    const prioritizeTaskFlow = ai.defineFlow<
+      typeof PrioritizeTaskInputSchema,
+      typeof PrioritizeTaskOutputSchema
+    >(
+      {
+        name: 'prioritizeTaskFlow',
+        inputSchema: PrioritizeTaskInputSchema,
+        outputSchema: PrioritizeTaskOutputSchema,
+      },
+      async input => {
+        const { output } = await prioritizeTaskPrompt(input);
 
-    // Optional: Add validation here to ensure AI output conforms to schema
-    if (!output || typeof output.priorityScore !== 'number' || output.priorityScore < 1 || output.priorityScore > 100) {
-        console.error("AI failed to return a valid priority score:", output);
-        // Return a default or throw an error
-        return { priorityScore: 50, reasoning: "AI failed to provide a valid score, assigned default." };
-    }
-    return output;
+        // Optional: Add validation here to ensure AI output conforms to schema
+        if (!output || typeof output.priorityScore !== 'number' || output.priorityScore < 1 || output.priorityScore > 100) {
+            console.error("AI failed to return a valid priority score:", output);
+            // Return a default or throw an error
+            return { priorityScore: 50, reasoning: "AI failed to provide a valid score, assigned default." };
+        }
+        return output;
+      }
+    );
+
+    // Run the flow with the input
+    return await prioritizeTaskFlow(input);
+  } catch (error) {
+    console.error("Error in prioritizeTask:", error);
+    // Return a fallback value in case of error
+    return { priorityScore: 50, reasoning: "Error occurred during prioritization. Using default value." };
   }
-);
+}
