@@ -72,7 +72,32 @@ export function getDbConnection(): Database.Database {
 
 // Initialize tables
 function initDb(db: Database.Database) {
-  // Create tasks table
+  // Create users table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT,
+      email TEXT,
+      role TEXT NOT NULL DEFAULT 'user',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      last_login TEXT
+    )
+  `);
+
+  // Create sessions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      expires TEXT NOT NULL,
+      data TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create tasks table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,7 +108,9 @@ function initDb(db: Database.Database) {
       category TEXT,
       priority_score REAL,
       is_completed BOOLEAN DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      user_id INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
@@ -98,14 +125,59 @@ function initDb(db: Database.Database) {
     )
   `);
 
-  // Create categories table
+  // Create categories table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      icon TEXT NOT NULL
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL,
+      user_id INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(name, user_id)
     )
   `);
+
+  // Add migrations for existing databases
+  migrateExistingData(db);
+}
+
+// Migrate existing data to support user authentication
+function migrateExistingData(db: Database.Database) {
+  // Check if we need to add user_id column to tasks
+  try {
+    // Try to get a task and check if user_id exists
+    const testQuery = db.prepare("SELECT user_id FROM tasks LIMIT 1");
+    try {
+      testQuery.get();
+    } catch (error) {
+      // If error, we need to add the column
+      console.log('Migrating tasks table to add user_id column');
+      db.exec("ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
+    }
+  } catch (error) {
+    // Table doesn't exist yet or other error, skip
+  }
+
+  // Check if we need to add user_id column to categories
+  try {
+    // Try to get a category and check if user_id exists
+    const testQuery = db.prepare("SELECT user_id FROM categories LIMIT 1");
+    try {
+      testQuery.get();
+    } catch (error) {
+      // If error, we need to add the column
+      console.log('Migrating categories table to add user_id column');
+      db.exec("ALTER TABLE categories ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
+      
+      // Update unique constraint
+      db.exec("CREATE TABLE categories_new (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, UNIQUE(name, user_id))");
+      db.exec("INSERT INTO categories_new SELECT id, name, icon, user_id FROM categories");
+      db.exec("DROP TABLE categories");
+      db.exec("ALTER TABLE categories_new RENAME TO categories");
+    }
+  } catch (error) {
+    // Table doesn't exist yet or other error, skip
+  }
 }
 
 // Graceful shutdown handler

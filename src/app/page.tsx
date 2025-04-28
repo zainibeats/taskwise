@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 import { getStoredTasks, saveTasks } from "@/lib/storage";
 import { TaskApi, CategoryApi } from "@/lib/api-client"; // Import API client
 import { useUndoRedo } from "./hooks/useUndoRedo";
@@ -88,6 +89,47 @@ const initialCategoryIcons: { [key: string]: string } = {
 
 // Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
 export default function Home() {
+  const router = useRouter();
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  
+  // Check authentication status first
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Check if setup is required
+        const setupResponse = await fetch('/api/auth/setup-required');
+        if (setupResponse.ok) {
+          const setupData = await setupResponse.json();
+          if (setupData.setupRequired) {
+            router.push('/setup');
+            return;
+          }
+        }
+        
+        // Check for session
+        const sessionResponse = await fetch('/api/auth/session');
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          setIsAuthenticated(!!sessionData.user);
+        } else {
+          // No valid session, redirect to login
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        // Assume not authenticated on error
+        setIsAuthenticated(false);
+        router.push('/login');
+      } finally {
+        setIsAuthChecking(false);
+      }
+    };
+    
+    checkAuth();
+  }, [router]);
+  
   // Debug logging for environment variables
   console.log("[DEBUG] API URL from env:", process.env.NEXT_PUBLIC_API_URL);
   console.log("[DEBUG] API Base URL:", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
@@ -108,9 +150,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true); // Add loading state to handle initialization period
   const { toast } = useToast();
   
-  // Initialize tasks from API instead of localStorage
+  // Modify the loadTasks useEffect to only run when authenticated
   useEffect(() => {
     async function loadTasks() {
+      // Only try to load tasks if authenticated
+      if (!isAuthenticated) return;
+      
       try {
         console.log("[DEBUG] Fetching tasks from API...");
         const apiTasks = await TaskApi.getAllTasks();
@@ -182,7 +227,7 @@ export default function Home() {
     }
     
     loadTasks();
-  }, []);
+  }, [isAuthenticated]); // Add isAuthenticated to dependency array
 
   // Custom undo/redo hook for tasks
   // Provides tasks, canUndo/canRedo, and history manipulation functions
@@ -247,8 +292,12 @@ export default function Home() {
   // Load stored category icons
   const [loadedCategoryIcons, setLoadedCategoryIcons] = useState(initialCategoryIcons);
   
+  // Modify the loadCategories useEffect to only run when authenticated
   useEffect(() => {
     async function loadCategories() {
+      // Only try to load categories if authenticated
+      if (!isAuthenticated) return;
+      
       console.log('[PAGE] Initial category load started');
       console.log('[PAGE] Built-in categories:', builtInCategories);
       console.log('[PAGE] Initial category icons:', initialCategoryIcons);
@@ -291,7 +340,7 @@ export default function Home() {
     }
     
     loadCategories();
-  }, []);
+  }, [isAuthenticated]); // Add isAuthenticated to dependency array
 
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const {
@@ -521,8 +570,15 @@ export default function Home() {
   // (date picker logic moved to useDatePicker)
   // (date picker logic moved to useDatePicker)
 
-
-  
+  // Add a loading state for the entire page
+  if (isAuthChecking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2">Checking authentication...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -874,21 +930,15 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
     <div className="absolute z-10 bg-popover text-popover-foreground shadow-md rounded-md p-2 w-64">
        <ScrollArea className="h-[200px] w-full rounded-md border">
           <div className="grid grid-cols-5 gap-2">
-            {emojis.map(/**
- * Renders a button for selecting an emoji.
- *
- * @param {string} emoji - The emoji to be displayed on the button.
- * @returns {JSX.Element} A button element that triggers the onEmojiSelect function when clicked.
- */
-(emoji) => (
-  <button
-    key={emoji}
-    className="text-2xl hover:bg-[rgba(139,233,253,0.1)] hover:text-[#8be9fd] rounded-md transition-colors"
-    onClick={() => onEmojiSelect(emoji)}
-  >
-    {emoji}
-  </button>
-))}
+            {emojis.map((emoji) => (
+              <button
+                key={emoji}
+                className="text-2xl hover:bg-[rgba(139,233,253,0.1)] hover:text-[#8be9fd] rounded-md transition-colors"
+                onClick={() => onEmojiSelect(emoji)}
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
       </ScrollArea>
       <Button variant="ghost" className="w-full mt-2 category-green-btn" onClick={onClose}>

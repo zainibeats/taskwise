@@ -2,35 +2,7 @@
 
 This guide outlines the detailed process for completing and deploying the TaskWise AI-powered todo list application on Vercel.
 
-## 1. Project Setup and Configuration [✅ Done]
-
-### Initial Setup
-
-1. **Create a Next.js Project** [✅ Done]
-   ```bash
-   npx create-next-app@latest taskwise --typescript
-   cd taskwise
-   ```
-
-2. **Install Dependencies** [✅ Done]
-   ```bash
-   npm install genkit date-fns better-sqlite3
-   npm install -D tailwindcss postcss autoprefixer
-   npx tailwindcss init -p
-   ```
-
-3. **Set Up Shadcn UI** [✅ Done]
-   ```bash
-   npx shadcn-ui@latest init
-   ```
-   
-4. **Configure Environment Variables** [✅ Done]
-   Create a `.env.local` file:
-   ```
-   GENKIT_API_KEY=your_genkit_api_key
-   ```
-
-## 2. Application Structure [✅ Done]
+## 1. Application Structure [✅ Done]
 
 ### Core Components
 
@@ -64,60 +36,7 @@ src/
     └── task-service.ts       # Task and category data access
 ```
 
-## 3. AI Implementation [✅ Done]
-
-### AI Instance Setup [✅ Done]
-
-Create `src/ai/ai-instance.ts`:
-```typescript
-'use server';
-
-import { createAI } from 'genkit';
-
-export const ai = createAI({
-  apiKey: process.env.GENKIT_API_KEY,
-});
-```
-
-### Task Prioritization Algorithm [✅ Done]
-
-The task prioritization flow in [`src/ai/flows/prioritize-task.ts`](file:///C:/Users/dontb/Documents/repos/to-do-ai/src/ai/flows/prioritize-task.ts) calculates priorities based on:
-
-1. Days until deadline
-2. Category-specific urgency ratios
-
-The prioritization algorithm will be refined to:
-- Calculate a base priority from importance.
-- Modulate the impact of the deadline based on the task category, preventing less important categories (e.g., "Personal") from receiving excessively high priorities simply due to imminent deadlines.
-- Ensure scores remain within the 1-100 range, providing a meaningful distribution even for tasks due soon.
-
-*Status: [✅ Done]*
-
-### Subtask Generation [✅ Done]
-
-Implement the subtask suggestion flow in [`src/ai/flows/suggest-subtasks.ts`](to-do-ai/src/ai/flows/suggest-subtasks.ts) to:
-- Take a task description as input
-- Use AI to generate relevant subtasks that help complete the main task
-- Return an array of subtask descriptions
-
-*Status: [✅ Done]*
-
-### Task Categorization [✅ Done]
-
-Implement the automatic categorization flow in `src/ai/flows/categorize-task.ts`:
-
-*Status: [✅ Done]*
-
-## 4. User Interface Implementation [✅ Done]
-
-### Task Form Component [✅ Done]
-
-Create a form component that:
-- Accepts task title, description, deadline, and importance
-- Uses AI to suggest a category
-- Submits the task to be prioritized and stored
-
-*Status: [✅ Done]*
+## 2. User Interface Implementation [✅ Done]
 
 ### Task List and Item Components [✅ Done]
 
@@ -129,7 +48,7 @@ Implement components to:
 
 *Status: `task-item.tsx` [✅ Created], `task-list.tsx` [✅ Created]. `subtask-list.tsx` and subtask regeneration [🚧 To Do].*
 
-## 5. Database Setup [✅ Done]
+## 3. Database Setup [✅ Done]
 
 ### SQLite Implementation with Connection Singleton [✅ Done]
 
@@ -217,93 +136,8 @@ TaskWise uses a two-tier storage approach:
    - This ensures consistent category management across devices
    - No dependency on localStorage for category management
 
-This approach ensures:
-- Data is primarily managed server-side for cross-device consistency
-- Basic functionality is maintained even if API connectivity is temporarily lost
-- Category management is always consistent through the API
 
-### Client Hooks [✅ Done]
-
-To interact with the API from the frontend, custom React hooks are provided:
-
-- `useTasks` - Hook for task-related operations
-- `useCategories` - Hook for category-related operations
-
-These hooks handle API communication and local state management, making it easy to integrate with UI components.
-
-### Docker Configuration for Persistent Data [✅ Done]
-
-The Docker configuration has been updated to properly support SQLite and ensure data persistence:
-
-```dockerfile
-FROM node:18-alpine
-
-# Install dependencies required for better-sqlite3
-RUN apk add --no-cache python3 make g++ gcc libc-dev
-
-WORKDIR /app
-
-# Create data directory for SQLite
-RUN mkdir -p /app/data && chmod 777 /app/data
-
-# Create a directory for logs
-RUN mkdir -p /app/logs && chmod 777 /app/logs
-
-# Copy package files first to leverage Docker caching
-COPY package*.json ./
-RUN npm install
-
-# Copy the rest of the application
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Expose both app port and database service port
-EXPOSE 3000 3100
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV NEXT_PUBLIC_API_URL=http://localhost:3100
-
-# Add volume for persistent data
-VOLUME ["/app/data"]
-
-# Start both the database service and the Next.js application
-CMD ["sh", "-c", "node db/connection.js & npm start"]
-```
-
-This Docker configuration:
-- Installs dependencies required for SQLite
-- Creates data and logs directories with appropriate permissions
-- Exposes both the application port (3000) and database service port (3100)
-- Sets environment variables for production mode
-- Mounts volumes to ensure database persistence across container restarts
-- Starts both the database service and the Next.js application
-- Optimizes the build process with layer caching
-
-The docker-compose.yml file has been similarly updated:
-
-```yaml
-services:
-  taskwise:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-      - "3100:3100"
-    environment:
-      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:3100
-    restart: unless-stopped
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-```
-
-## 6. Development Mode Database Persistence [🚧 To Do]
+## 4. Development Mode Database Persistence [🚧 To Do]
 
 The current database implementation works well in production but has issues in development mode due to Next.js hot reloading. Each time the code changes or the server restarts, the database connection singleton is reset.
 
@@ -363,7 +197,7 @@ This approach:
 - Works consistently in both development and production environments
 - Allows for proper data persistence across hot reloads
 
-## 7. Server Actions [🚧 To Do]
+## 5. Server Actions [🚧 To Do]
 
 Implement server actions for database operations:
 
@@ -398,20 +232,7 @@ export async function createTask(formData: FormData) {
 }
 ```
 
-## 8. Testing
-
-1. **Unit Tests**:
-   ```bash
-   npm install -D jest @testing-library/react @testing-library/jest-dom
-   ```
-
-2. **Test AI Functions**:
-   Create mock tests for AI functions to ensure they return expected outputs.
-
-3. **Test UI Components**:
-   Test key components like task creation form and task list.
-
-## 9. Deployment to Vercel
+## 6. Deployment to Vercel
 
 1. **Push to GitHub**:
    ```bash
@@ -439,16 +260,152 @@ export async function createTask(formData: FormData) {
    - Check logs for any deployment issues
    - Set up usage alerts for the database and AI API
 
-## 10. Post-Deployment Tasks
+## 7. User Authentication Implementation [🚧 To Do]
 
-1. **Set Up Analytics**:
-   - Implement Vercel Analytics to track usage patterns
+To implement user authentication with a configuration-based approach:
 
-2. **Performance Optimization**:
-   - Use the Next.js built-in performance analysis tools
-   - Implement caching for AI requests to reduce API usage
+### Overview
 
-## 11. Future Enhancements
+The user authentication system will:
+- Use a simple configuration file (YAML/JSON) for admin account management
+- Allow users to set their own passwords on first login
+- Separate tasks and categories per user in the SQLite database
+- Support simple login/logout functionality
+- Implement session management
+
+### Configuration-Based Account Management
+
+1. **Create Users Configuration File**:
+   ```bash
+   mkdir -p config
+   touch config/users.yml
+   ```
+   
+   Example `users.yml` structure:
+   ```yaml
+   users:
+     - username: admin
+       role: admin
+       email: admin@example.com
+       active: true
+     - username: user1
+       role: user
+       email: user1@example.com
+       active: true
+     - username: user2
+       role: user
+       email: user2@example.com
+       active: false
+   ```
+
+2. **Database Schema Updates**:
+   We need to modify our database schema to:
+   - Add users table
+   - Add user ID to tasks and categories
+   - Add sessions table for authentication
+   
+   Schema modifications:
+   ```sql
+   -- Users table
+   CREATE TABLE IF NOT EXISTS users (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     username TEXT UNIQUE NOT NULL,
+     password_hash TEXT,
+     email TEXT,
+     role TEXT NOT NULL DEFAULT 'user',
+     active INTEGER NOT NULL DEFAULT 1,
+     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+     last_login TEXT
+   );
+   
+   -- Update tasks table
+   ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id);
+   
+   -- Update categories table
+   ALTER TABLE categories ADD COLUMN user_id INTEGER REFERENCES users(id);
+   
+   -- Sessions table
+   CREATE TABLE IF NOT EXISTS sessions (
+     id TEXT PRIMARY KEY,
+     user_id INTEGER NOT NULL,
+     expires TEXT NOT NULL,
+     data TEXT,
+     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+   );
+   ```
+
+3. **Authentication API Routes**:
+   Create the following API routes:
+   - `/api/auth/login` - Login with username/password
+   - `/api/auth/logout` - End user session
+   - `/api/auth/session` - Get current session info
+   - `/api/auth/set-password` - Set initial password
+
+4. **Auth Middleware**:
+   Create middleware to check authentication for protected routes
+   
+5. **Config File Loader**:
+   Create a service to load and manage the users configuration file
+
+6. **UI Components**:
+   - Login form
+   - Password setup form
+   - Session management
+
+### Implementation Steps
+
+1. **Update Database Schema**
+   - Modify the database schema in both `db.ts` and `connection.js`
+   - Create migration functions to update existing databases
+
+2. **User Configuration Manager**
+   - Create a service to load user configuration from YAML/JSON
+   - Implement functions to synchronize with the database
+
+3. **Authentication Services**
+   - Implement password hashing with bcrypt
+   - Create session management functions
+   - Add auth middleware
+
+4. **API Endpoints**
+   - Create the authentication API endpoints
+   - Update existing API routes to filter by user_id
+
+5. **UI Components**
+   - Add login page
+   - Add password setup page
+   - Update task management to work with authentication
+
+6. **Testing**
+   - Test with multiple user accounts
+   - Verify data separation between users
+
+7. **Documentation**
+   - Update README
+   - Document the configuration file format
+   - Update self-hosting guide
+
+### Security Considerations
+
+1. **Password Storage**:
+   - Store only password hashes using bcrypt
+   - Implement password strength requirements
+
+2. **Session Management**:
+   - Use secure cookies for session storage
+   - Implement session expiration
+   - Provide session renewal
+
+3. **Rate Limiting**:
+   - Implement rate limiting for login attempts
+   - Add protection against brute force attacks
+
+4. **Least Privilege**:
+   - Ensure admin-only actions are properly protected
+
+This implementation plan provides a straightforward approach to multi-user support while maintaining the simplicity of TaskWise's architecture and avoiding the need for a complex admin UI.
+
+## 8. Future Enhancements
 
 1. **User-defined importance**
    - Allow option to manually set importance to influence priority score (1-10 scale)

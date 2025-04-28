@@ -1,0 +1,13 @@
+users:
+  - username: admin
+    role: admin
+    email: admin@example.com
+    active: true
+  - username: user1
+    role: user
+    email: user1@example.com
+    active: true
+  - username: user2
+    role: user
+    email: user2@example.com
+    active: true 

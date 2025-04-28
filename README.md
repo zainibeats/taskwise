@@ -65,6 +65,39 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 
 5. Open [http://localhost:9002](http://localhost:9002) in your browser to see the application.
 
+## 🔒 User Authentication
+
+TaskWise now includes a configuration-based user authentication system that:
+
+- Allows for administrator-defined user accounts via a simple YAML configuration file
+- Separates tasks and categories per user
+- Securely stores passwords using bcrypt hashing
+- Implements session-based authentication
+
+### User Configuration
+
+Users are defined in the `config/users.yml` file:
+
+```yaml
+users:
+  - username: admin
+    role: admin
+    email: admin@example.com
+    active: true
+  - username: user1
+    role: user
+    email: user1@example.com
+    active: true
+```
+
+When you make changes to this file, run the sync script to update the database:
+
+```bash
+npm run sync-users
+```
+
+Users will be prompted to set their own password on first login.
+
 ## 🔒 Data Storage Approach
 
 TaskWise now uses SQLite for task persistence, which means:

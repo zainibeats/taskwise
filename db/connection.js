@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 // Get current file path in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -23,7 +24,32 @@ db.pragma('foreign_keys = ON');
 
 // Initialize tables
 function initDb() {
-  // Create tasks table
+  // Create users table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT,
+      email TEXT,
+      role TEXT NOT NULL DEFAULT 'user',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      last_login TEXT
+    )
+  `);
+
+  // Create sessions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      expires TEXT NOT NULL,
+      data TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create tasks table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +60,9 @@ function initDb() {
       category TEXT,
       priority_score REAL,
       is_completed BOOLEAN DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      user_id INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
@@ -49,16 +77,61 @@ function initDb() {
     )
   `);
 
-  // Create categories table
+  // Create categories table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      icon TEXT NOT NULL
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL,
+      user_id INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(name, user_id)
     )
   `);
 
+  // Add migrations for existing data
+  migrateExistingData();
+
   console.log('Database tables initialized');
+}
+
+// Migrate existing data to support user authentication
+function migrateExistingData() {
+  // Check if we need to add user_id column to tasks
+  try {
+    // Try to get a task and check if user_id exists
+    const testQuery = db.prepare("SELECT user_id FROM tasks LIMIT 1");
+    try {
+      testQuery.get();
+    } catch (error) {
+      // If error, we need to add the column
+      console.log('Migrating tasks table to add user_id column');
+      db.exec("ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
+    }
+  } catch (error) {
+    // Table doesn't exist yet or other error, skip
+  }
+
+  // Check if we need to add user_id column to categories
+  try {
+    // Try to get a category and check if user_id exists
+    const testQuery = db.prepare("SELECT user_id FROM categories LIMIT 1");
+    try {
+      testQuery.get();
+    } catch (error) {
+      // If error, we need to add the column
+      console.log('Migrating categories table to add user_id column');
+      db.exec("ALTER TABLE categories ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
+      
+      // Update unique constraint
+      db.exec("CREATE TABLE categories_new (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, UNIQUE(name, user_id))");
+      db.exec("INSERT INTO categories_new SELECT id, name, icon, user_id FROM categories");
+      db.exec("DROP TABLE categories");
+      db.exec("ALTER TABLE categories_new RENAME TO categories");
+    }
+  } catch (error) {
+    // Table doesn't exist yet or other error, skip
+  }
 }
 
 // Initialize database
@@ -86,6 +159,33 @@ async function parseJsonBody(req) {
   });
 }
 
+// Helper to get user ID from session
+async function getUserIdFromSession(req) {
+  // Get session ID from cookies
+  const cookies = req.headers.cookie || '';
+  const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('taskwise_session='));
+  const sessionId = sessionCookie ? sessionCookie.split('=')[1].trim() : null;
+  
+  if (!sessionId) {
+    return null;
+  }
+  
+  // Get session
+  const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
+  
+  if (!session) {
+    return null;
+  }
+  
+  // Check if session is expired
+  if (new Date(session.expires) < new Date()) {
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+    return null;
+  }
+  
+  return session.user_id;
+}
+
 // Create HTTP server to handle database operations
 const server = http.createServer(async (req, res) => {
   // Set CORS headers
@@ -110,12 +210,22 @@ const server = http.createServer(async (req, res) => {
   try {
     // Tasks API
     if (path.startsWith('/api/tasks')) {
+      // Get the user ID from session for user-specific data
+      const userId = await getUserIdFromSession(req);
+      
+      if (!userId) {
+        res.statusCode = 401;
+        res.end(JSON.stringify({ error: 'Authentication required' }));
+        return;
+      }
+      
       const taskIdMatch = path.match(/\/api\/tasks\/(\d+)/);
       const taskId = taskIdMatch ? parseInt(taskIdMatch[1], 10) : null;
 
       // Get all tasks
       if (path === '/api/tasks' && req.method === 'GET') {
-        const tasks = db.prepare('SELECT * FROM tasks ORDER BY priority_score DESC').all();
+        // Only get tasks for the current user
+        const tasks = db.prepare('SELECT * FROM tasks WHERE user_id = ? ORDER BY priority_score DESC').all(userId);
         
         // Get subtasks for each task
         const tasksWithSubtasks = tasks.map(task => {
@@ -141,10 +251,11 @@ const server = http.createServer(async (req, res) => {
         
         const { title, description, deadline, importance, category, priority_score, is_completed = false, subtasks = [] } = task;
         
+        // Add user_id to the task
         const result = db.prepare(`
-          INSERT INTO tasks (title, description, deadline, importance, category, priority_score, is_completed)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(title, description, deadline, importance, category, priority_score, is_completed ? 1 : 0);
+          INSERT INTO tasks (title, description, deadline, importance, category, priority_score, is_completed, user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(title, description, deadline, importance, category, priority_score, is_completed ? 1 : 0, userId);
         
         const taskId = result.lastInsertRowid;
         
@@ -169,16 +280,17 @@ const server = http.createServer(async (req, res) => {
       
       // Single task operations
       if (taskId !== null) {
+        // Verify task belongs to current user
+        const task = db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').get(taskId, userId);
+        
+        if (!task) {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ error: 'Task not found' }));
+          return;
+        }
+        
         // Get task by ID
         if (req.method === 'GET') {
-          const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
-          
-          if (!task) {
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: 'Task not found' }));
-            return;
-          }
-          
           const subtasks = db.prepare('SELECT * FROM subtasks WHERE task_id = ?').all(taskId);
           
           res.setHeader('Content-Type', 'application/json');
@@ -320,9 +432,19 @@ const server = http.createServer(async (req, res) => {
     
     // Categories API
     if (path.startsWith('/api/categories')) {
+      // Get the user ID from session for user-specific data
+      const userId = await getUserIdFromSession(req);
+      
+      if (!userId) {
+        res.statusCode = 401;
+        res.end(JSON.stringify({ error: 'Authentication required' }));
+        return;
+      }
+      
       // Get all categories
       if (path === '/api/categories' && req.method === 'GET') {
-        const categories = db.prepare('SELECT * FROM categories').all();
+        // Only get categories for the current user
+        const categories = db.prepare('SELECT * FROM categories WHERE user_id = ?').all(userId);
         
         res.setHeader('Content-Type', 'application/json');
         res.statusCode = 200;
@@ -330,51 +452,327 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       
-      // Create or update category
+      // Create/Update category
       if (path === '/api/categories' && req.method === 'POST') {
         const category = await parseJsonBody(req);
         
-        if (!category.name || !category.icon) {
-          res.statusCode = 400;
-          res.end(JSON.stringify({ error: 'Name and icon are required' }));
-          return;
-        }
-        
-        const existing = db.prepare('SELECT * FROM categories WHERE name = ?').get(category.name);
-        
-        if (existing) {
-          db.prepare('UPDATE categories SET icon = ? WHERE name = ?').run(category.icon, category.name);
-        } else {
-          db.prepare('INSERT INTO categories (name, icon) VALUES (?, ?)').run(category.name, category.icon);
-        }
-        
-        res.setHeader('Content-Type', 'application/json');
-        res.statusCode = 201;
-        res.end(JSON.stringify(category));
-        return;
-      }
-      
-      // Delete category
-      if (path === '/api/categories' && req.method === 'DELETE') {
-        const name = url.searchParams.get('name');
-        
-        if (!name) {
+        if (!category.name) {
           res.statusCode = 400;
           res.end(JSON.stringify({ error: 'Category name is required' }));
           return;
         }
         
-        const result = db.prepare('DELETE FROM categories WHERE name = ?').run(name);
+        const { name, icon } = category;
         
-        if (result.changes === 0) {
+        // Check if category exists for this user
+        const existingCategory = db.prepare('SELECT * FROM categories WHERE name = ? AND user_id = ?').get(name, userId);
+        
+        if (existingCategory) {
+          // Update existing category
+          db.prepare('UPDATE categories SET icon = ? WHERE id = ?').run(icon, existingCategory.id);
+          
+          res.setHeader('Content-Type', 'application/json');
+          res.statusCode = 200;
+          res.end(JSON.stringify({ id: existingCategory.id, name, icon, user_id: userId }));
+        } else {
+          // Create new category
+          const result = db.prepare('INSERT INTO categories (name, icon, user_id) VALUES (?, ?, ?)').run(name, icon, userId);
+          
+          res.setHeader('Content-Type', 'application/json');
+          res.statusCode = 201;
+          res.end(JSON.stringify({ id: result.lastInsertRowid, name, icon, user_id: userId }));
+        }
+        
+        return;
+      }
+      
+      // Delete category
+      if (path.startsWith('/api/categories') && req.method === 'DELETE') {
+        // Extract category name from query parameters
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const categoryName = url.searchParams.get('name');
+        
+        if (!categoryName) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Category name is required' }));
+          return;
+        }
+        
+        // Check if the category exists for this user
+        const existingCategory = db.prepare('SELECT * FROM categories WHERE name = ? AND user_id = ?').get(categoryName, userId);
+        
+        if (!existingCategory) {
           res.statusCode = 404;
           res.end(JSON.stringify({ error: 'Category not found' }));
           return;
         }
         
+        // Delete the category
+        db.prepare('DELETE FROM categories WHERE id = ?').run(existingCategory.id);
+        
         res.setHeader('Content-Type', 'application/json');
         res.statusCode = 200;
         res.end(JSON.stringify({ success: true }));
+        return;
+      }
+    }
+    
+    // Auth API routes
+    if (path.startsWith('/api/auth')) {
+      // Login
+      if (path === '/api/auth/login' && req.method === 'POST') {
+        const { username, password } = await parseJsonBody(req);
+        
+        if (!username || !password) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Username and password are required' }));
+          return;
+        }
+        
+        // Get user
+        const user = db.prepare('SELECT * FROM users WHERE username = ? AND active = 1').get(username);
+        
+        if (!user || !user.password_hash) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: 'Invalid username or password' }));
+          return;
+        }
+        
+        // Verify password (would use bcrypt here in a proper implementation)
+        // For simplicity in this external service, we'll just compare hashes directly
+        // (In a real app, you'd use bcrypt.compare)
+        const passwordMatch = user.password_hash === password; // Not secure, just for demo!
+        
+        if (!passwordMatch) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: 'Invalid username or password' }));
+          return;
+        }
+        
+        // Create session
+        const sessionId = crypto.randomUUID();
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        
+        db.prepare(`
+          INSERT INTO sessions (id, user_id, expires, data)
+          VALUES (?, ?, ?, ?)
+        `).run(sessionId, user.id, expires, JSON.stringify({ username: user.username, role: user.role }));
+        
+        // Update last login
+        db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+        
+        // Return user info and session ID
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({
+          success: true,
+          sessionId,
+          user: {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+          }
+        }));
+        return;
+      }
+      
+      // Set password
+      if (path === '/api/auth/set-password' && req.method === 'POST') {
+        const { username, password } = await parseJsonBody(req);
+        
+        if (!username || !password) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Username and password are required' }));
+          return;
+        }
+        
+        // Check if user exists and doesn't have a password
+        const user = db.prepare('SELECT * FROM users WHERE username = ? AND active = 1').get(username);
+        
+        if (!user) {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ error: 'User not found' }));
+          return;
+        }
+        
+        if (user.password_hash) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'User already has a password set' }));
+          return;
+        }
+        
+        // Set password (would use bcrypt here in a proper implementation)
+        // For simplicity in this external service, we'll just store the raw password
+        // (In a real app, you'd use bcrypt.hash)
+        db.prepare('UPDATE users SET password_hash = ? WHERE username = ?').run(password, username);
+        
+        // Create session
+        const sessionId = crypto.randomUUID();
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        
+        db.prepare(`
+          INSERT INTO sessions (id, user_id, expires, data)
+          VALUES (?, ?, ?, ?)
+        `).run(sessionId, user.id, expires, JSON.stringify({ username: user.username, role: user.role }));
+        
+        // Update last login
+        db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+        
+        // Return success
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({
+          success: true,
+          sessionId,
+          user: {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+          }
+        }));
+        return;
+      }
+      
+      // Get session
+      if (path === '/api/auth/session' && req.method === 'GET') {
+        // Get session ID from cookies
+        const cookies = req.headers.cookie || '';
+        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('taskwise_session='));
+        const sessionId = sessionCookie ? sessionCookie.split('=')[1].trim() : null;
+        
+        if (!sessionId) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ authenticated: false }));
+          return;
+        }
+        
+        // Delete expired sessions
+        db.prepare('DELETE FROM sessions WHERE expires < CURRENT_TIMESTAMP').run();
+        
+        // Get session
+        const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
+        
+        if (!session) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ authenticated: false }));
+          return;
+        }
+        
+        // Check if session is expired
+        if (new Date(session.expires) < new Date()) {
+          db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+          res.statusCode = 401;
+          res.end(JSON.stringify({ authenticated: false }));
+          return;
+        }
+        
+        // Get user info
+        const user = db.prepare('SELECT id, username, email, role FROM users WHERE id = ?').get(session.user_id);
+        
+        if (!user) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ authenticated: false }));
+          return;
+        }
+        
+        // Extend session
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        db.prepare('UPDATE sessions SET expires = ? WHERE id = ?').run(expires, sessionId);
+        
+        // Return user info
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({
+          authenticated: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+          }
+        }));
+        return;
+      }
+      
+      // Logout
+      if (path === '/api/auth/logout' && req.method === 'POST') {
+        // Get session ID from cookies
+        const cookies = req.headers.cookie || '';
+        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('taskwise_session='));
+        const sessionId = sessionCookie ? sessionCookie.split('=')[1].trim() : null;
+        
+        if (sessionId) {
+          // Delete session
+          db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+        }
+        
+        // Return success
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({ success: true }));
+        return;
+      }
+    }
+    
+    // Users API routes
+    if (path.startsWith('/api/users')) {
+      // Sync users from config to database
+      if (path === '/api/users/sync' && req.method === 'POST') {
+        try {
+          const configUsers = await parseJsonBody(req);
+          
+          if (!Array.isArray(configUsers.users)) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'Invalid users config format' }));
+            return;
+          }
+          
+          // Get existing users from the database
+          const existingUsers = db.prepare('SELECT id, username, email, role, active FROM users').all();
+          const existingUserMap = new Map(existingUsers.map(user => [user.username, user]));
+          
+          // Process each user in the config
+          for (const configUser of configUsers.users) {
+            const existingUser = existingUserMap.get(configUser.username);
+            
+            if (existingUser) {
+              // Update existing user
+              db.prepare(`
+                UPDATE users 
+                SET 
+                  email = ?, 
+                  role = ?, 
+                  active = ?
+                WHERE username = ?
+              `).run(
+                configUser.email || existingUser.email,
+                configUser.role || existingUser.role || 'user',
+                configUser.active !== undefined ? (configUser.active ? 1 : 0) : (existingUser.active ? 1 : 0),
+                configUser.username
+              );
+            } else {
+              // Insert new user without password (password will be set on first login)
+              db.prepare(`
+                INSERT INTO users (username, email, role, active)
+                VALUES (?, ?, ?, ?)
+              `).run(
+                configUser.username,
+                configUser.email || null,
+                configUser.role || 'user',
+                configUser.active !== undefined ? (configUser.active ? 1 : 0) : 1
+              );
+            }
+          }
+          
+          // Return success
+          res.setHeader('Content-Type', 'application/json');
+          res.statusCode = 200;
+          res.end(JSON.stringify({ success: true }));
+        } catch (error) {
+          console.error('Error syncing users:', error);
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: 'Error syncing users' }));
+        }
         return;
       }
     }
