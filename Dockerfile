@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
 # Install dependencies required for better-sqlite3
-RUN apk add --no-cache python3 make g++ gcc libc-dev
+RUN apk add --no-cache python3 make g++ gcc libc-dev sqlite
 
 WORKDIR /app
 
@@ -17,6 +17,9 @@ RUN npm install
 
 # Copy the rest of the application
 COPY . .
+
+# Add executable permission to the initialization script
+RUN chmod +x /app/scripts/docker-init.sh
 
 # Define build argument for API URL
 # This must be passed in docker-compose.yml or docker build command
@@ -38,4 +41,4 @@ ENV NODE_ENV=production
 VOLUME ["/app/data"]
 
 # Start both the database service and the Next.js application
-CMD ["sh", "-c", "node db/connection.js & npm start"]
+CMD ["sh", "-c", "/app/scripts/docker-init.sh && (node db/connection.js & npm start)"]
