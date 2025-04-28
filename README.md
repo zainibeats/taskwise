@@ -110,13 +110,13 @@ For detailed user management instructions, see [User Management Guide](docs/user
 
 ## 🔒 Data Storage Approach
 
-TaskWise now uses SQLite for task persistence, which means:
+TaskWise uses SQLite for task persistence, which means:
 
 - **Self-Hosted**: All your task data remains on your server, not in the browser
 - **Cross-Device Sync**: Access your tasks from any device by connecting to your self-hosted instance
 - **Data Persistence**: Your data is safely stored in a SQLite database file on your server
 - **Simple Setup**: No complex database configuration required - SQLite works out of the box
-- **Fallback Mechanism**: If the database is temporarily unavailable, tasks fall back to localStorage
+- **Server-Side Only**: All data is stored exclusively in the database, with no browser storage used
 
 The SQLite database is stored in the `data/taskwise.db` file in your project directory.
 
