@@ -7,8 +7,8 @@
  * - SuggestSubtasksOutput - The output type for the suggestSubtasks function.
  */
 
-import {ai} from '@/ai/ai-instance';
-import {z} from 'genkit';
+import { getAI } from '@/ai/ai-instance';
+import { z } from 'genkit';
 
 const SuggestSubtasksInputSchema = z.object({
   taskDescription: z.string().describe('The description of the main task.'),
@@ -21,41 +21,52 @@ const SuggestSubtasksOutputSchema = z.object({
 export type SuggestSubtasksOutput = z.infer<typeof SuggestSubtasksOutputSchema>;
 
 export async function suggestSubtasks(input: SuggestSubtasksInput): Promise<SuggestSubtasksOutput> {
-  return suggestSubtasksFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'suggestSubtasksPrompt',
-  input: {
-    schema: z.object({
-      taskDescription: z.string().describe('The description of the main task.'),
-    }),
-  },
-  output: {
-    schema: z.object({
-      subtasks: z.array(z.string()).describe('A list of suggested subtasks for the main task.'),
-    }),
-  },
-  prompt: `You are a helpful AI assistant that suggests high-level subtasks for a given task.
+  try {
+    // Get the current AI instance with the latest API key
+    const ai = getAI();
+    
+    // Define the flow and prompt inside the function to use the current AI instance
+    const prompt = ai.definePrompt({
+      name: 'suggestSubtasksPrompt',
+      input: {
+        schema: z.object({
+          taskDescription: z.string().describe('The description of the main task.'),
+        }),
+      },
+      output: {
+        schema: z.object({
+          subtasks: z.array(z.string()).describe('A list of suggested subtasks for the main task.'),
+        }),
+      },
+      prompt: `You are a helpful AI assistant that suggests high-level subtasks for a given task.
 
   Given the following task description, suggest 2-3 broad subtasks that break down the main task into its key components or stages. Avoid overly specific or numerous micro-steps.
 
   Task Description: {{{taskDescription}}}
 
   Subtasks (provide 2-3):`,
-});
+    });
 
-const suggestSubtasksFlow = ai.defineFlow<
-  typeof SuggestSubtasksInputSchema,
-  typeof SuggestSubtasksOutputSchema
->(
-  {
-    name: 'suggestSubtasksFlow',
-    inputSchema: SuggestSubtasksInputSchema,
-    outputSchema: SuggestSubtasksOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const suggestSubtasksFlow = ai.defineFlow<
+      typeof SuggestSubtasksInputSchema,
+      typeof SuggestSubtasksOutputSchema
+    >(
+      {
+        name: 'suggestSubtasksFlow',
+        inputSchema: SuggestSubtasksInputSchema,
+        outputSchema: SuggestSubtasksOutputSchema,
+      },
+      async input => {
+        const {output} = await prompt(input);
+        return output!;
+      }
+    );
+    
+    // Run the flow with the input
+    return await suggestSubtasksFlow(input);
+  } catch (error) {
+    console.error("Error in suggestSubtasks:", error);
+    // Return a fallback value in case of error
+    return { subtasks: ["Subtask suggestion failed. Try adding this manually."] };
   }
-);
+}
