@@ -49,6 +49,20 @@ function initDb() {
     )
   `);
 
+  // Create user_settings table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      setting_key TEXT NOT NULL,
+      setting_value TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, setting_key)
+    )
+  `);
+
   // Create tasks table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
@@ -777,13 +791,95 @@ const server = http.createServer(async (req, res) => {
       }
     }
     
-    // Route not found
+    // User Settings API
+    if (path.startsWith('/api/user-settings')) {
+      // Get the user ID from session for user-specific data
+      const userId = await getUserIdFromSession(req);
+      
+      if (!userId) {
+        res.statusCode = 401;
+        res.end(JSON.stringify({ error: 'Authentication required' }));
+        return;
+      }
+      
+      // Get all settings for the user
+      if (path === '/api/user-settings' && req.method === 'GET') {
+        const settingsRows = db.prepare('SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?').all(userId);
+        
+        // Convert to object format
+        const settings = {};
+        settingsRows.forEach(row => {
+          settings[row.setting_key] = row.setting_value;
+        });
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify(settings));
+        return;
+      }
+      
+      // Get a specific setting
+      const settingKeyMatch = path.match(/\/api\/user-settings\/([^\/]+)/);
+      const settingKey = settingKeyMatch ? decodeURIComponent(settingKeyMatch[1]) : null;
+      
+      if (settingKey && req.method === 'GET') {
+        const setting = db.prepare('SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?').get(userId, settingKey);
+        
+        if (setting) {
+          res.setHeader('Content-Type', 'application/json');
+          res.statusCode = 200;
+          res.end(JSON.stringify({ value: setting.setting_value }));
+        } else {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ error: 'Setting not found' }));
+        }
+        return;
+      }
+      
+      // Create or update a setting
+      if (path === '/api/user-settings' && req.method === 'POST') {
+        const { key, value } = await parseJsonBody(req);
+        
+        if (!key) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Setting key is required' }));
+          return;
+        }
+        
+        // Upsert - if exists update, otherwise insert
+        const stmt = db.prepare(`
+          INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, setting_key) 
+          DO UPDATE SET setting_value = excluded.setting_value, updated_at = CURRENT_TIMESTAMP
+        `);
+        
+        stmt.run(userId, key, value);
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({ success: true }));
+        return;
+      }
+      
+      // Delete a setting
+      if (settingKey && req.method === 'DELETE') {
+        db.prepare('DELETE FROM user_settings WHERE user_id = ? AND setting_key = ?').run(userId, settingKey);
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify({ success: true }));
+        return;
+      }
+    }
+    
+    // Handle 404 - Resource not found
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not found' }));
   } catch (error) {
     console.error('Server error:', error);
     res.statusCode = 500;
-    res.end(JSON.stringify({ error: 'Internal server error', details: error.message }));
+    res.end(JSON.stringify({ error: 'Internal server error' }));
   }
 });
 
