@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { categoryService } from '@/lib/task-service';
+import { getCurrentSession } from '@/lib/session';
 
 // Set CORS headers helper
 function setCorsHeaders(response: NextResponse) {
@@ -15,9 +16,19 @@ export async function OPTIONS() {
 }
 
 // GET /api/categories - Get all categories
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const categories = await categoryService.getAllCategories();
+    // Get current user
+    const session = await getCurrentSession();
+    if (!session || !session.user) {
+      return setCorsHeaders(
+        NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      );
+    }
+    
+    const userId = session.user.id;
+    // Get categories for this user (including system defaults)
+    const categories = await categoryService.getAllCategories(userId);
     return setCorsHeaders(NextResponse.json(categories));
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -33,6 +44,15 @@ export async function GET() {
 // POST /api/categories - Create or update a category
 export async function POST(request: NextRequest) {
   try {
+    // Get current user
+    const session = await getCurrentSession();
+    if (!session || !session.user) {
+      return setCorsHeaders(
+        NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      );
+    }
+    
+    const userId = session.user.id;
     const categoryData = await request.json();
     
     // Validate required fields
@@ -42,7 +62,13 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const category = await categoryService.saveCategory(categoryData);
+    // Add user_id to the category data
+    const categoryWithUser = {
+      ...categoryData,
+      user_id: userId
+    };
+    
+    const category = await categoryService.saveCategory(categoryWithUser);
     return setCorsHeaders(NextResponse.json(category, { status: 201 }));
   } catch (error) {
     console.error('Error saving category:', error);
@@ -58,6 +84,15 @@ export async function POST(request: NextRequest) {
 // DELETE /api/categories?name=categoryName - Delete a category
 export async function DELETE(request: NextRequest) {
   try {
+    // Get current user
+    const session = await getCurrentSession();
+    if (!session || !session.user) {
+      return setCorsHeaders(
+        NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      );
+    }
+    
+    const userId = session.user.id;
     const url = new URL(request.url);
     const name = url.searchParams.get('name');
     console.log('Delete category request received for name:', name);
@@ -69,8 +104,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    console.log(`Attempting to delete category "${name}"`);
-    const success = await categoryService.deleteCategory(name);
+    console.log(`Attempting to delete category "${name}" for user ${userId}`);
+    const success = await categoryService.deleteCategory(name, userId);
     console.log(`Delete operation result for "${name}":`, success);
     
     if (!success) {
