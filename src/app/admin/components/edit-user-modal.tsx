@@ -11,6 +11,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
+import '@/app/category-green.css';
+import '@/app/clear-selection.css';
 
 interface User {
   id: number;
@@ -138,6 +140,7 @@ export function EditUserModal({ userId, open, onOpenChange, onUserUpdated }: Edi
             type="button" 
             variant="outline" 
             onClick={() => onOpenChange(false)}
+            className="category-clear-btn"
           >
             Cancel
           </Button>
