@@ -197,7 +197,7 @@ This approach:
 - Works consistently in both development and production environments
 - Allows for proper data persistence across hot reloads
 
-## 5. Server Actions [🚧 To Do]
+## 5. Server Actions [🚧 To Do - Future]
 
 Implement server actions for database operations:
 
@@ -260,174 +260,100 @@ export async function createTask(formData: FormData) {
    - Check logs for any deployment issues
    - Set up usage alerts for the database and AI API
 
-## 7. User Authentication Implementation [🚧 To Do]
+## 7. User Authentication Implementation [✅ Partially Complete]
 
-To implement user authentication with a configuration-based approach:
+User authentication has been implemented with the following features:
 
-### Overview
+### Completed ✅
+- Database schema updates for users, sessions, and user-specific data
+- Configuration-based account management with `config/users.yml`
+- Authentication API routes for login, logout, and session management
+- User-specific tasks and categories in the SQLite database
+- Password hashing with bcrypt
+- Session management with secure cookies
 
-The user authentication system will:
-- Use a simple configuration file (YAML/JSON) for admin account management
-- Allow users to set their own passwords on first login
-- Separate tasks and categories per user in the SQLite database
-- Support simple login/logout functionality
-- Implement session management
+### Still To Do 🚧
+- Admin UI for user management (see new section below)
+- Additional testing with multiple user accounts
+- Documentation updates for user management
 
-### Configuration-Based Account Management
+## 8. Admin UI for User Management [🚧 To Do]
 
-1. **Create Users Configuration File**:
-   ```bash
-   mkdir -p config
-   touch config/users.yml
-   ```
-   
-   Example `users.yml` structure:
-   ```yaml
-   users:
-     - username: admin
-       role: admin
-       email: admin@example.com
-       active: true
-     - username: user1
-       role: user
-       email: user1@example.com
-       active: true
-     - username: user2
-       role: user
-       email: user2@example.com
-       active: false
-   ```
+We need to create an admin interface for managing users:
 
-2. **Database Schema Updates**:
-   We need to modify our database schema to:
-   - Add users table
-   - Add user ID to tasks and categories
-   - Add sessions table for authentication
-   
-   Schema modifications:
-   ```sql
-   -- Users table
-   CREATE TABLE IF NOT EXISTS users (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     username TEXT UNIQUE NOT NULL,
-     password_hash TEXT,
-     email TEXT,
-     role TEXT NOT NULL DEFAULT 'user',
-     active INTEGER NOT NULL DEFAULT 1,
-     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-     last_login TEXT
-   );
-   
-   -- Update tasks table
-   ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id);
-   
-   -- Update categories table
-   ALTER TABLE categories ADD COLUMN user_id INTEGER REFERENCES users(id);
-   
-   -- Sessions table
-   CREATE TABLE IF NOT EXISTS sessions (
-     id TEXT PRIMARY KEY,
-     user_id INTEGER NOT NULL,
-     expires TEXT NOT NULL,
-     data TEXT,
-     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-   );
-   ```
+### Requirements
 
-3. **Authentication API Routes**:
-   Create the following API routes:
-   - `/api/auth/login` - Login with username/password
-   - `/api/auth/logout` - End user session
-   - `/api/auth/session` - Get current session info
-   - `/api/auth/set-password` - Set initial password
+1. **Admin Dashboard**
+   - Create a protected route at `/admin` that only admin users can access
+   - Display a list of all users with their status, role, and last login time
+   - Provide options to add, edit, or deactivate users
 
-4. **Auth Middleware**:
-   Create middleware to check authentication for protected routes
-   
-5. **Config File Loader**:
-   Create a service to load and manage the users configuration file
+2. **User Creation Form**
+   - Form for admins to create new users with:
+     - Username (required)
+     - Email (required)
+     - Role (admin/user)
+     - Initial password or option to send setup email
+     - Active status toggle
 
-6. **UI Components**:
-   - Login form
-   - Password setup form
-   - Session management
+3. **User Edit Form**
+   - Allow editing existing user details
+   - Option to reset user password
+   - Option to change user role or deactivate account
+
+4. **API Endpoints**
+   - Create API endpoints for the admin UI:
+     - `GET /api/admin/users` - List all users
+     - `POST /api/admin/users` - Create a new user
+     - `PUT /api/admin/users/:id` - Update a user
+     - `DELETE /api/admin/users/:id` - Delete or deactivate a user
+
+5. **Authorization Middleware**
+   - Ensure that only users with the admin role can access these endpoints
+   - Add role-based access control to the existing auth middleware
 
 ### Implementation Steps
 
-1. **Update Database Schema**
-   - Modify the database schema in both `db.ts` and `connection.js`
-   - Create migration functions to update existing databases
+1. **Create Admin Layout and Components**
+   - Create admin layout with sidebar navigation
+   - Create user list component with table/card view
+   - Create user form components for adding/editing
 
-2. **User Configuration Manager**
-   - Create a service to load user configuration from YAML/JSON
-   - Implement functions to synchronize with the database
+2. **Implement API Routes**
+   - Create the necessary API endpoints under `/api/admin/`
+   - Implement proper validation and error handling
+   - Add admin-only authorization checks
 
-3. **Authentication Services**
-   - Implement password hashing with bcrypt
-   - Create session management functions
-   - Add auth middleware
+3. **Develop Admin Dashboard Pages**
+   - Create admin dashboard pages using the React components
+   - Implement client-side data fetching and state management
+   - Add proper feedback for successful operations
 
-4. **API Endpoints**
-   - Create the authentication API endpoints
-   - Update existing API routes to filter by user_id
+4. **Testing and Documentation**
+   - Test the admin UI with different user roles
+   - Update documentation with admin features
+   - Create admin guide for user management
 
-5. **UI Components**
-   - Add login page
-   - Add password setup page
-   - Update task management to work with authentication
-
-6. **Testing**
-   - Test with multiple user accounts
-   - Verify data separation between users
-
-7. **Documentation**
-   - Update README
-   - Document the configuration file format
-   - Update self-hosting guide
-
-### Security Considerations
-
-1. **Password Storage**:
-   - Store only password hashes using bcrypt
-   - Implement password strength requirements
-
-2. **Session Management**:
-   - Use secure cookies for session storage
-   - Implement session expiration
-   - Provide session renewal
-
-3. **Rate Limiting**:
-   - Implement rate limiting for login attempts
-   - Add protection against brute force attacks
-
-4. **Least Privilege**:
-   - Ensure admin-only actions are properly protected
-
-This implementation plan provides a straightforward approach to multi-user support while maintaining the simplicity of TaskWise's architecture and avoiding the need for a complex admin UI.
-
-## 8. Future Enhancements
+## 9. Future Enhancements [🚧 To Do]
 
 1. **User-defined importance**
    - Allow option to manually set importance to influence priority score (1-10 scale)
 
-2. **User Authentication**:
-   - Implement authentication using NextAuth.js
-
-3. **Mobile Optimization**:
+2. **Mobile Optimization**:
    - Ensure the UI works well on mobile devices
 
-4. **Advanced AI Features**:
+3. **Advanced AI Features**:
    - Task scheduling suggestions
    - Time estimation for tasks
    - Task dependency tracking
 
-5. **Integration with Calendar Apps**:
+4. **Integration with Calendar Apps**:
    - Allow syncing with Google Calendar or other calendar services
 
-6. **Progressive Web App (PWA)**:
+5. **Progressive Web App (PWA)**:
    - Configure for offline use as a PWA
 
-7. **Kanban-Style UI (Optional)**:
+6. **Kanban-Style UI (Optional)**:
    - Implement a multi-column layout (similar to Trello or TickTick) where columns could represent categories, statuses, or custom groupings.
    - Use a library like `@dnd-kit` to enable drag-and-drop functionality for tasks between columns and for reordering within columns.
    - Restructure state to manage columns and the tasks within them.
