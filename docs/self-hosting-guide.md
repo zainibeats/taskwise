@@ -57,30 +57,84 @@ This guide provides detailed instructions for self-hosting the TaskWise applicat
    docker-compose up -d
    ```
 
-5. **Access the application**
+5. **Create an admin user**
+   After the container starts, you need to create an initial admin user:
+   ```bash
+   docker-compose exec taskwise npm run create-admin
+   ```
+   
+   Follow the prompts to enter username, email, and password for the admin.
+
+6. **Access the application**
    Open a browser and navigate to `http://YOUR_SERVER_IP:3000`
 
-### Option 2: Direct Docker Run
+## User Management
 
-1. **Set up environment**
-   ```bash
-   cp env.example .env
-   # Edit .env with your configuration
+TaskWise includes a comprehensive user management system with role-based access control.
+
+### Creating Admin Users
+
+There are two ways to create admin users:
+
+#### Option 1: Using the CLI Script (Recommended)
+
+```bash
+# For local installation
+npm run create-admin
+
+# For Docker installation
+docker-compose exec taskwise npm run create-admin
+```
+
+#### Option 2: Using the Configuration File
+
+1. Edit the `config/users.yml` file:
+   ```yaml
+   users:
+     - username: admin
+       role: admin
+       email: admin@example.com
+       active: true
+     - username: user1
+       role: user
+       email: user1@example.com
+       active: true
    ```
 
-2. **Build the Docker image**
+2. Sync the users to the database:
    ```bash
-   docker build --build-arg NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100 -t taskwise .
+   # For local installation
+   npm run sync-users
+
+   # For Docker installation
+   docker-compose exec taskwise npm run sync-users
    ```
 
-3. **Run the container**
-   ```bash
-   docker run -p 3000:3000 -p 3100:3100 \
-     -e GOOGLE_AI_API_KEY=your_key_here \
-     -v ./data:/app/data \
-     -v ./logs:/app/logs \
-     taskwise
-   ```
+3. Users will be prompted to set a password on first login.
+
+### Using the Admin Interface
+
+Once you have an admin account:
+
+1. Log in to TaskWise with your admin credentials
+2. Navigate to `/admin` to access the admin dashboard
+3. Use the admin dashboard to:
+   - Create new users
+   - Edit existing users
+   - Deactivate users
+   - Reset passwords
+
+For detailed user management instructions, see [User Management Guide](user-management-guide.md).
+
+### User Data Separation
+
+Each user has their own:
+- Tasks
+- Categories
+- Priority settings
+- UI preferences
+
+Data is completely isolated between users.
 
 ## For Developers
 
@@ -143,6 +197,7 @@ For a production deployment, you may want to use a domain name instead of an IP 
 3. **Optional: Set up HTTPS**
    - For secure access, consider setting up HTTPS with Let's Encrypt
    - If using HTTPS, update URLs to use `https://` instead of `http://`
+   - See [SSL Setup Guide](ssl-setup-guide.md) for detailed instructions
 
 ## Data Backup
 
@@ -189,3 +244,8 @@ To update to a new version of TaskWise:
 
 3. **Regular Updates**
    - Keep your system, Docker, and TaskWise updated with security patches 
+
+4. **User Passwords**
+   - Enforce strong password policies
+   - Regularly review active user accounts
+   - Deactivate accounts that are no longer needed 
