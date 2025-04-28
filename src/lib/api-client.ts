@@ -16,7 +16,9 @@ export const TaskApi = {
     console.log("[API] Starting getAllTasks...");
     console.log("[API] Using API URL:", `${API_BASE_URL}/api/tasks`);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks`);
+      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+        credentials: 'include', // Include cookies for authentication
+      });
       console.log("[API] Response status:", response.status);
       if (!response.ok) {
         console.error("[API] Response not OK:", response.status, response.statusText);
@@ -76,6 +78,7 @@ export const TaskApi = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(apiTask),
+        credentials: 'include', // Include cookies for authentication
       });
 
       if (!response.ok) {
@@ -135,6 +138,7 @@ export const TaskApi = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(apiUpdates),
+        credentials: 'include', // Include cookies for authentication
       });
 
       if (!response.ok) {
@@ -172,6 +176,7 @@ export const TaskApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/api/tasks/${parseInt(taskId, 10)}`, {
         method: 'DELETE',
+        credentials: 'include', // Include cookies for authentication
       });
 
       if (!response.ok) {
@@ -194,6 +199,7 @@ export const TaskApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/api/tasks/${parseInt(taskId, 10)}`, {
         method: 'PATCH',
+        credentials: 'include', // Include cookies for authentication
       });
 
       if (!response.ok) {
@@ -235,7 +241,9 @@ export const CategoryApi = {
     console.log("[API] Starting getAllCategories...");
     console.log("[API] Using API URL:", `${API_BASE_URL}/api/categories`);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/categories`);
+      const response = await fetch(`${API_BASE_URL}/api/categories`, {
+        credentials: 'include', // Include cookies for authentication
+      });
       console.log("[API] Categories response status:", response.status);
       if (!response.ok) {
         console.error("[API] Categories response not OK:", response.status, response.statusText);
@@ -275,6 +283,7 @@ export const CategoryApi = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, icon }),
+        credentials: 'include', // Include cookies for authentication
       });
 
       console.log("[API] Save category response status:", response.status);
@@ -307,6 +316,7 @@ export const CategoryApi = {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies for authentication
       });
 
       console.log("[API] Delete category response:", response);
@@ -324,6 +334,107 @@ export const CategoryApi = {
       return true;
     } catch (error) {
       console.error('[API] Error deleting category:', error);
+      return false;
+    }
+  }
+};
+
+/**
+ * User Settings API client functions
+ */
+export const UserSettingsApi = {
+  /**
+   * Get all user settings
+   * @returns Object with settings or empty object if failed
+   */
+  async getAllSettings(): Promise<Record<string, string>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user-settings`, {
+        credentials: 'include', // Include cookies for authentication
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch settings: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user settings:', error);
+      return {};
+    }
+  },
+
+  /**
+   * Get a specific setting
+   * @param key Setting key
+   * @returns Setting value or null if not found
+   */
+  async getSetting(key: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user-settings/${encodeURIComponent(key)}`, {
+        credentials: 'include', // Include cookies for authentication
+      });
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null; // Setting not found
+        }
+        throw new Error(`Failed to fetch setting: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      return result.value;
+    } catch (error) {
+      console.error(`Error fetching setting '${key}':`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Save a setting
+   * @param key Setting key
+   * @param value Setting value
+   * @returns Success indicator
+   */
+  async saveSetting(key: string, value: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user-settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ key, value }),
+        credentials: 'include', // Include cookies for authentication
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save setting: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error saving setting '${key}':`, error);
+      return false;
+    }
+  },
+
+  /**
+   * Delete a setting
+   * @param key Setting key
+   * @returns Success indicator
+   */
+  async deleteSetting(key: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user-settings/${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+        credentials: 'include', // Include cookies for authentication
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete setting: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error deleting setting '${key}':`, error);
       return false;
     }
   }
