@@ -3,11 +3,14 @@
 
 import { NextRequest } from 'next/server';
 
+// Session cookie name
+const SESSION_COOKIE_NAME = 'taskwise_session';
+
 /**
  * Check if the user has a valid session cookie
  */
 export function hasValidSession(request: NextRequest): boolean {
-  return !!request.cookies.get('taskwise_session')?.value;
+  return !!request.cookies.get(SESSION_COOKIE_NAME)?.value;
 }
 
 /**
@@ -29,6 +32,35 @@ export async function shouldRedirectToSetup(request: NextRequest): Promise<boole
     return false;
   } catch (error) {
     console.error('Error checking setup status in middleware:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if the current session belongs to an admin user
+ * This makes an API call to avoid using database directly in middleware
+ */
+export async function hasAdminPrivileges(request: NextRequest): Promise<boolean> {
+  try {
+    if (!hasValidSession(request)) {
+      return false;
+    }
+    
+    const baseUrl = new URL(request.url).origin;
+    const response = await fetch(`${baseUrl}/api/auth/session`, {
+      headers: {
+        cookie: request.headers.get('cookie') || '',
+      },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.user?.role === 'admin';
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking admin status in middleware:', error);
     return false;
   }
 } 

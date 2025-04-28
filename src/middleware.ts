@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasValidSession } from '@/lib/middleware-check';
+import { hasValidSession, hasAdminPrivileges } from '@/lib/middleware-check';
 
 // Paths that are public (don't require authentication)
 const PUBLIC_PATHS = [
@@ -20,6 +20,12 @@ const PROTECTED_API_PATHS = [
   '/api/categories',
 ];
 
+// Admin paths that require admin privileges
+const ADMIN_PATHS = [
+  '/admin',
+  '/api/admin',
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
@@ -34,8 +40,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
+  // Check if this is an admin route
+  const isAdminRoute = ADMIN_PATHS.some(path => pathname.startsWith(path));
+  
   // Check if the request is for an API route
-  const isApiRoute = PROTECTED_API_PATHS.some(path => pathname.startsWith(path));
+  const isApiRoute = PROTECTED_API_PATHS.some(path => pathname.startsWith(path)) || 
+                     (isAdminRoute && pathname.startsWith('/api/'));
   
   // Check session
   if (!hasValidSession(request)) {
@@ -47,7 +57,28 @@ export async function middleware(request: NextRequest) {
     } else {
       // Redirect to login page for non-API routes
       const loginUrl = new URL('/login', request.url);
+      // Add the returnUrl parameter so we can redirect back after login
+      loginUrl.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(loginUrl);
+    }
+  }
+  
+  // Check admin privileges for admin routes
+  if (isAdminRoute) {
+    const isAdmin = await hasAdminPrivileges(request);
+    
+    if (!isAdmin) {
+      if (isApiRoute) {
+        return NextResponse.json(
+          { error: 'Admin privileges required' },
+          { status: 403 }
+        );
+      } else {
+        // Redirect to home page with an error message
+        const homeUrl = new URL('/', request.url);
+        homeUrl.searchParams.set('error', 'admin_required');
+        return NextResponse.redirect(homeUrl);
+      }
     }
   }
   
