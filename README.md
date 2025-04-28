@@ -9,6 +9,7 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 - **Subtask Suggestions**: AI generates relevant subtasks to help break down complex tasks
 - **Task Management**: Create, edit, complete, and delete tasks with an intuitive interface
 - **Cross-Device Sync**: Access your tasks from any device by connecting to your self-hosted server
+- **User Management**: Admin interface for creating and managing user accounts
 
 ## 🛠️ Technology Stack
 
@@ -67,36 +68,45 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 
 ## 🔒 User Authentication
 
-TaskWise now includes a configuration-based user authentication system that:
+TaskWise now includes a user authentication system with role-based access control:
 
-- Allows for administrator-defined user accounts via a simple YAML configuration file
-- Separates tasks and categories per user
-- Securely stores passwords using bcrypt hashing
-- Implements session-based authentication
+- Supports multiple user accounts with admin and user roles
+- Admin users can create and manage other users
+- Each user has their own separate tasks and categories
+- Secure password storage using bcrypt hashing
+- Session-based authentication with cookie storage
 
-### User Configuration
+### Setting Up Admin Users
 
-Users are defined in the `config/users.yml` file:
+#### For Development
 
-```yaml
-users:
-  - username: admin
-    role: admin
-    email: admin@example.com
-    active: true
-  - username: user1
-    role: user
-    email: user1@example.com
-    active: true
-```
-
-When you make changes to this file, run the sync script to update the database:
+To create an initial admin user in development:
 
 ```bash
-npm run sync-users
+# Run the admin creation script
+npm run create-admin
 ```
 
-Users will be prompted to set their own password on first login.
+Follow the prompts to enter a username, email, and password.
+
+#### For Docker/Self-Hosting
+
+When using Docker for self-hosting, create an admin user with:
+
+```bash
+# After starting the container
+docker-compose exec taskwise npm run create-admin
+```
+
+### User Management
+
+Once you have an admin account:
+
+1. Log in to TaskWise using the admin credentials
+2. Navigate to `/admin` to access the admin dashboard
+3. Use the dashboard to create, edit, or deactivate user accounts
+
+For detailed user management instructions, see [User Management Guide](docs/user-management-guide.md).
 
 ## 🔒 Data Storage Approach
 
@@ -121,6 +131,15 @@ TaskWise can be self-hosted on your own server. For detailed instructions, see t
 - Domain name setup
 - Security considerations
 - Data backup strategies
+
+For SSL setup instructions, see the [SSL Setup Guide](docs/ssl-setup-guide.md).
+
+To quickly set up TaskWise on Windows, you can use our PowerShell setup script:
+
+```powershell
+# Run as Administrator in PowerShell
+.\scripts\setup-taskwise.ps1
+```
 
 The most important thing to remember when self-hosting is to configure the `NEXT_PUBLIC_API_URL` with your server's actual IP address or hostname to ensure cross-device database access works properly.
 
