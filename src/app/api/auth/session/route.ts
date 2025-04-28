@@ -4,7 +4,7 @@ import { getCurrentSession, extendSession } from '@/lib/session';
 export async function GET(req: NextRequest) {
   try {
     // Get current session
-    const session = getCurrentSession();
+    const session = await getCurrentSession();
     
     if (!session || !session.user) {
       return NextResponse.json({ 
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Extend session
-    extendSession(session.id);
+    await extendSession(session.id);
     
     // Return user data without sensitive information
     return NextResponse.json({

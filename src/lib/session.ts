@@ -42,9 +42,9 @@ export function createSession(user: User): string {
 /**
  * Set the session cookie for a user
  */
-export function setSessionCookie(sessionId: string): void {
+export async function setSessionCookie(sessionId: string): Promise<void> {
   const expires = new Date(Date.now() + SESSION_EXPIRY);
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   
   cookieStore.set({
     name: SESSION_COOKIE_NAME,
@@ -60,8 +60,8 @@ export function setSessionCookie(sessionId: string): void {
 /**
  * Clear the session cookie
  */
-export function clearSessionCookie(): void {
-  const cookieStore = cookies();
+export async function clearSessionCookie(): Promise<void> {
+  const cookieStore = await cookies();
   
   cookieStore.set({
     name: SESSION_COOKIE_NAME,
@@ -77,8 +77,8 @@ export function clearSessionCookie(): void {
 /**
  * Get the current session from cookie
  */
-export function getSessionFromCookie(): string | undefined {
-  const cookieStore = cookies();
+export async function getSessionFromCookie(): Promise<string | undefined> {
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   
   return sessionCookie?.value;
@@ -119,8 +119,8 @@ export function getSessionById(sessionId: string): Session | null {
 /**
  * Get the current user's session
  */
-export function getCurrentSession(): Session | null {
-  const sessionId = getSessionFromCookie();
+export async function getCurrentSession(): Promise<Session | null> {
+  const sessionId = await getSessionFromCookie();
   
   if (!sessionId) {
     return null;
@@ -148,12 +148,12 @@ export function deleteUserSessions(userId: number): void {
 /**
  * Extend a session's expiration time
  */
-export function extendSession(sessionId: string): void {
+export async function extendSession(sessionId: string): Promise<void> {
   const db = getDbConnection();
   const expires = new Date(Date.now() + SESSION_EXPIRY).toISOString();
   
   db.prepare('UPDATE sessions SET expires = ? WHERE id = ?').run(expires, sessionId);
   
   // Also update cookie
-  setSessionCookie(sessionId);
+  await setSessionCookie(sessionId);
 } 

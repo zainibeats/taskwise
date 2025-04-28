@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import getDbConnection from '@/lib/db';
 import { isFirstTimeSetup } from '@/lib/setup-check';
-import { createSession } from '@/lib/session';
+import { createSession, setSessionCookie } from '@/lib/session';
 import { User } from '@/lib/user-config';
 
 export async function POST(req: NextRequest) {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     // Create session
     const sessionId = createSession(user);
     
-    // Return response with session cookie
+    // Create response
     const response = NextResponse.json({ 
       success: true,
       user: {
@@ -52,16 +52,8 @@ export async function POST(req: NextRequest) {
       }
     });
     
-    // Set the session cookie
-    response.cookies.set({
-      name: 'taskwise_session',
-      value: sessionId,
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
+    // Set the session cookie using the async helper function
+    await setSessionCookie(sessionId);
     
     return response;
   } catch (error) {
