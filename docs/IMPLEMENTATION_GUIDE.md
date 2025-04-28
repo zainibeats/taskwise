@@ -334,7 +334,58 @@ We need to create an admin interface for managing users:
    - Update documentation with admin features
    - Create admin guide for user management
 
-## 9. Future Enhancements [🚧 To Do]
+## 9. Button and UI Styling [✅ Done]
+
+TaskWise uses consistent button styling across the application to provide a cohesive user experience:
+
+### Button Style Categories
+
+1. **Primary Action Buttons (`category-green-btn`)**
+   - Primary action buttons (save, create, edit) use a cyan color theme
+   - Hover and focus states highlight with Dracula Cyan (#8be9fd)
+   - Implementation in `src/app/category-green.css`
+   - Features:
+     - Soft glow effect on hover
+     - Color transitions for interaction feedback
+     - Used for task creation, editing, and other primary actions
+
+2. **Secondary/Cancel Buttons (`category-clear-btn`)**
+   - Used for cancellation and secondary actions
+   - Hover state uses destructive/red color for clear visual feedback
+   - Implementation in `src/app/clear-selection.css`
+   - Used for cancel operations, back buttons, and destructive actions
+
+3. **Form Controls**
+   - Select dropdowns, calendar controls, and other UI elements
+   - Consistent styling with the button system
+   - Custom styling for hover and focus states
+
+### Implementation
+
+The button styles are implemented using CSS classes that can be applied to any Button component:
+
+```tsx
+// Primary action button
+<Button className="category-green-btn">Save</Button>
+
+// Secondary/cancel button
+<Button variant="outline" className="category-clear-btn">Cancel</Button>
+```
+
+These styles are also applied to selects and other UI controls:
+
+```tsx
+<Select>
+  <SelectTrigger className="category-green-select">
+    <SelectValue placeholder="Select option" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="option1">Option 1</SelectItem>
+  </SelectContent>
+</Select>
+```
+
+## 10. Future Enhancements [🚧 To Do]
 
 1. **User-defined importance**
    - Allow option to manually set importance to influence priority score (1-10 scale)
