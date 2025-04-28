@@ -17,7 +17,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "sync-users": "node scripts/sync-users.js"
+    "sync-users": "node scripts/sync-users.js",
+    "create-admin": "node scripts/create-admin.js"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.7.0",
