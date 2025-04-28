@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserForm } from '@/app/admin/components/user-form';
 import { EditUserModal } from '@/app/admin/components/edit-user-modal';
+import '@/app/category-green.css';
+import '@/app/clear-selection.css';
 
 // This matches the UserFormData interface in user-form.tsx
 interface UserFormData {
@@ -118,7 +120,7 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <Link href="/">
-          <Button variant="outline">Back to App</Button>
+          <Button variant="outline" className="category-clear-btn">Back to App</Button>
         </Link>
       </div>
 
@@ -183,6 +185,7 @@ export default function AdminDashboard() {
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handleEditUser(user.id)}
+                                className="category-green-btn"
                               >
                                 Edit
                               </Button>
