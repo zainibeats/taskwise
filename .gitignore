@@ -10,8 +10,8 @@
 !.yarn/releases
 !.yarn/versions
 
-# database backup
-taskwise.db.bak
+# databases
+taskwise.db
 
 # env
 .env
