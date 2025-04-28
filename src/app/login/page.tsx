@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [checkingSetup, setCheckingSetup] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams?.get('returnUrl') || '/';
 
   // Check if first-time setup is required when the component mounts
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function LoginPage() {
           title: 'Login successful',
           description: 'Welcome back!',
         });
-        router.push('/');
+        router.push(returnUrl);
       } else {
         toast({
           title: 'Login failed',
