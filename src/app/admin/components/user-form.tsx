@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useForm } from 'react-hook-form';
+import '@/app/category-green.css';
+import '@/app/clear-selection.css';
 
 interface UserFormProps {
   user?: {
@@ -152,7 +154,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           value={role}
           onValueChange={(value) => setValue('role', value)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="category-green-select">
             <SelectValue placeholder="Select role" />
           </SelectTrigger>
           <SelectContent>
@@ -171,7 +173,11 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         <Label htmlFor="active">Active</Label>
       </div>
 
-      <Button type="submit" disabled={isSubmitting}>
+      <Button 
+        type="submit" 
+        disabled={isSubmitting}
+        className="category-green-btn"
+      >
         {isSubmitting ? 'Saving...' : user ? 'Update User' : 'Create User'}
       </Button>
     </form>
