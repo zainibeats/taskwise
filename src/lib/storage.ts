@@ -1,132 +1,118 @@
 import { Task } from "@/app/types/task";
+import { TaskApi, CategoryApi } from "./api-client";
 
-// Constants for localStorage keys
-const STORAGE_KEYS = {
-  TASKS: 'taskwise_tasks',
-  CATEGORY_ICONS: 'taskwise_category_icons',
-  CUSTOM_CATEGORIES: 'taskwise_custom_categories',
-};
+// This file now acts as a redirect to the database API
+// No localStorage is used anywhere in this file
 
 /**
- * Retrieves tasks from localStorage
+ * Retrieves tasks from the database API
  * @returns Array of tasks or null if not found
  */
-export const getStoredTasks = (): Task[] | null => {
-  if (typeof window === 'undefined') return null; // Server-side check
-  
+export const getStoredTasks = async (): Promise<Task[] | null> => {
   try {
-    const storedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
-    if (!storedTasks) return null;
-    
-    // Parse and handle date objects properly (JSON.parse converts dates to strings)
-    const tasks: Task[] = JSON.parse(storedTasks, (key, value) => {
-      // Convert deadline strings back to Date objects
-      if (key === 'deadline' && value) {
-        return new Date(value);
-      }
-      return value;
-    });
-    
-    return tasks;
+    const tasks = await TaskApi.getAllTasks();
+    return tasks.length > 0 ? tasks : null;
   } catch (error) {
-    console.error('Error retrieving tasks from localStorage:', error);
+    console.error('Error retrieving tasks from database:', error);
     return null;
   }
 };
 
 /**
- * Saves tasks to localStorage
+ * Saves tasks to the database
  * @param tasks Tasks array to store
  * @returns boolean success indicator
  */
-export const saveTasks = (tasks: Task[]): boolean => {
-  if (typeof window === 'undefined') return false; // Server-side check
-  
+export const saveTasks = async (tasks: Task[]): Promise<boolean> => {
   try {
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    // Create or update each task in the database
+    for (const task of tasks) {
+      if (task.id && !task.id.startsWith('local-') && !task.id.startsWith('default-')) {
+        // Update existing task
+        await TaskApi.updateTask(task.id, task);
+      } else {
+        // Create new task
+        const { id, ...taskWithoutId } = task;
+        await TaskApi.createTask(taskWithoutId);
+      }
+    }
     return true;
   } catch (error) {
-    console.error('Error saving tasks to localStorage:', error);
+    console.error('Error saving tasks to database:', error);
     return false;
   }
 };
 
 /**
- * Retrieves category icons from localStorage
+ * Retrieves category icons from the database
  * @returns Category icons object or null if not found
  */
-export const getStoredCategoryIcons = (): Record<string, string> | null => {
-  if (typeof window === 'undefined') return null; // Server-side check
-  
+export const getStoredCategoryIcons = async (): Promise<Record<string, string> | null> => {
   try {
-    const storedIcons = localStorage.getItem(STORAGE_KEYS.CATEGORY_ICONS);
-    if (!storedIcons) return null;
-    
-    return JSON.parse(storedIcons);
+    const categories = await CategoryApi.getAllCategories();
+    return Object.keys(categories).length > 0 ? categories : null;
   } catch (error) {
-    console.error('Error retrieving category icons from localStorage:', error);
+    console.error('Error retrieving category icons from database:', error);
     return null;
   }
 };
 
 /**
- * Retrieves custom categories from localStorage
+ * Retrieves custom categories from the database
  * @returns Custom categories object or null if not found
  */
-export const getStoredCustomCategories = (): Record<string, string> | null => {
-  if (typeof window === 'undefined') return null; // Server-side check
-  
+export const getStoredCustomCategories = async (): Promise<Record<string, string> | null> => {
   try {
-    const storedCustomCategories = localStorage.getItem(STORAGE_KEYS.CUSTOM_CATEGORIES);
-    console.log('[STORAGE] Retrieving custom categories:', storedCustomCategories);
+    const allCategories = await CategoryApi.getAllCategories();
+    // Filter to only get custom categories (those not in the built-in list)
+    const builtInCategories = [
+      "Work", "Home", "Errands", "Personal", "Health", 
+      "Finance", "Education", "Social", "Travel", "Other"
+    ];
     
-    if (!storedCustomCategories) {
-      console.log('[STORAGE] No custom categories found in localStorage');
-      return null;
-    }
+    const customCategories: Record<string, string> = {};
+    Object.entries(allCategories).forEach(([category, icon]) => {
+      if (!builtInCategories.includes(category)) {
+        customCategories[category] = icon;
+      }
+    });
     
-    const parsedCategories = JSON.parse(storedCustomCategories);
-    console.log('[STORAGE] Parsed custom categories:', parsedCategories);
-    return parsedCategories;
+    return Object.keys(customCategories).length > 0 ? customCategories : null;
   } catch (error) {
-    console.error('[STORAGE] Error retrieving custom categories from localStorage:', error);
+    console.error('Error retrieving custom categories from database:', error);
     return null;
   }
 };
 
 /**
- * Saves category icons to localStorage
+ * Saves category icons to the database
  * @param icons Category icons object to store
  * @returns boolean success indicator
  */
-export const saveCategoryIcons = (icons: Record<string, string>): boolean => {
-  if (typeof window === 'undefined') return false; // Server-side check
-  
+export const saveCategoryIcons = async (icons: Record<string, string>): Promise<boolean> => {
   try {
-    localStorage.setItem(STORAGE_KEYS.CATEGORY_ICONS, JSON.stringify(icons));
+    // Save each category and its icon
+    for (const [category, icon] of Object.entries(icons)) {
+      await CategoryApi.saveCategory(category, icon);
+    }
     return true;
   } catch (error) {
-    console.error('Error saving category icons to localStorage:', error);
+    console.error('Error saving category icons to database:', error);
     return false;
   }
 };
 
 /**
- * Saves custom categories to localStorage
- * @param customCategories Custom categories object to store
+ * Saves custom categories to the database
+ * @param allCategories All categories object to store
  * @param builtInCategories Array of built-in category names to exclude
  * @returns boolean success indicator
  */
-export const saveCustomCategories = (
+export const saveCustomCategories = async (
   allCategories: Record<string, string>,
   builtInCategories: string[]
-): boolean => {
-  if (typeof window === 'undefined') return false; // Server-side check
-  
+): Promise<boolean> => {
   try {
-    console.log('[STORAGE] Saving custom categories. All categories:', allCategories);
-    console.log('[STORAGE] Built-in categories:', builtInCategories);
-    
     // Filter out built-in categories to only save custom ones
     const customCategories: Record<string, string> = {};
     Object.entries(allCategories).forEach(([category, icon]) => {
@@ -135,37 +121,47 @@ export const saveCustomCategories = (
       }
     });
     
-    console.log('[STORAGE] Filtered custom categories to save:', customCategories);
-    
-    if (Object.keys(customCategories).length === 0) {
-      console.log('[STORAGE] No custom categories to save, skipping');
-      return true;
+    // Save each custom category
+    for (const [category, icon] of Object.entries(customCategories)) {
+      await CategoryApi.saveCategory(category, icon);
     }
     
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_CATEGORIES, JSON.stringify(customCategories));
-    console.log('[STORAGE] Custom categories saved successfully');
     return true;
   } catch (error) {
-    console.error('[STORAGE] Error saving custom categories to localStorage:', error);
+    console.error('Error saving custom categories to database:', error);
     return false;
   }
 };
 
 /**
- * Clears all TaskWise data from localStorage
+ * Clears all TaskWise data from the database for the current user
+ * Note: This should be implemented with caution as it's a destructive operation
  * @returns boolean success indicator
  */
-export const clearAllData = (): boolean => {
-  if (typeof window === 'undefined') return false; // Server-side check
-  
+export const clearAllData = async (): Promise<boolean> => {
   try {
-    // Explicitly remove all storage keys
-    Object.values(STORAGE_KEYS).forEach(key => {
-      localStorage.removeItem(key);
-    });
+    // Delete all tasks
+    const tasks = await TaskApi.getAllTasks();
+    for (const task of tasks) {
+      await TaskApi.deleteTask(task.id);
+    }
+    
+    // Custom categories (non-built-in) should be deleted as well
+    const allCategories = await CategoryApi.getAllCategories();
+    const builtInCategories = [
+      "Work", "Home", "Errands", "Personal", "Health", 
+      "Finance", "Education", "Social", "Travel", "Other"
+    ];
+    
+    for (const category of Object.keys(allCategories)) {
+      if (!builtInCategories.includes(category)) {
+        await CategoryApi.deleteCategory(category);
+      }
+    }
+    
     return true;
   } catch (error) {
-    console.error('Error clearing data from localStorage:', error);
+    console.error('Error clearing data from database:', error);
     return false;
   }
 };
