@@ -49,6 +49,7 @@ import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 import { ModeToggle } from "@/components/theme-toggle";
 import { ClearAllDataButton } from "@/components/ClearAllDataButton";
+import { SettingsMenu } from "@/components/settings-menu";
 import { CreateCategoryModal } from "@/components/CreateCategoryModal";
 
 import type { Task, Subtask } from "./types/task";
@@ -598,6 +599,7 @@ export default function Home() {
       <div className="mb-2" />
       <Card className="relative">
         <div className="absolute top-6 right-6 z-10 flex items-center space-x-2">
+          <SettingsMenu />
           <ModeToggle />
           <ClearAllDataButton />
         </div>
