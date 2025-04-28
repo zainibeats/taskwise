@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByUsername, setUserPassword, userNeedsPasswordSetup } from '@/lib/user-config';
-import { createSession, setSessionCookie } from '@/lib/session';
+import { createSession } from '@/lib/session';
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,10 +47,14 @@ export async function POST(req: NextRequest) {
     // Create session
     const sessionId = createSession(user);
     
+    // Set cookie expiration (24 hours)
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
     // Create the response
     const response = NextResponse.json(
       { 
-        success: true, 
+        success: true,
+        sessionId, // Include sessionId in the response 
         user: {
           username: user.username,
           email: user.email,
@@ -60,8 +64,16 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
     
-    // Set the session cookie using the async helper function
-    await setSessionCookie(sessionId);
+    // Set the session cookie directly in the response
+    response.cookies.set({
+      name: 'taskwise_session',
+      value: sessionId,
+      expires,
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
     
     return response;
   } catch (error) {

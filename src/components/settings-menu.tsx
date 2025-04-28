@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { UserSettingsApi } from "@/lib/api-client"
 
 /**
  * SettingsMenu component allows users to configure application settings,
@@ -38,12 +39,14 @@ export function SettingsMenu() {
   const { toast } = useToast()
   const router = useRouter()
 
-  // Load API key from localStorage when component mounts
+  // Load API key from database when component mounts
   useEffect(() => {
-    const savedApiKey = localStorage.getItem("googleAiApiKey")
-    if (savedApiKey) {
-      setApiKey(savedApiKey)
-    }
+    const loadApiKey = async () => {
+      const savedApiKey = await UserSettingsApi.getSetting("googleAiApiKey");
+      if (savedApiKey) {
+        setApiKey(savedApiKey);
+      }
+    };
     
     // Check if the user is an admin
     const checkAdminStatus = async () => {
@@ -58,28 +61,47 @@ export function SettingsMenu() {
       }
     }
     
-    checkAdminStatus()
+    loadApiKey();
+    checkAdminStatus();
   }, [])
 
-  // Save API key to localStorage
-  const saveApiKey = () => {
-    localStorage.setItem("googleAiApiKey", apiKey)
-    setIsDialogOpen(false)
-    toast({
-      title: "API Key Saved",
-      description: "Your Google AI API key has been saved successfully.",
-    })
+  // Save API key to database
+  const saveApiKey = async () => {
+    const success = await UserSettingsApi.saveSetting("googleAiApiKey", apiKey);
+    
+    if (success) {
+      setIsDialogOpen(false);
+      toast({
+        title: "API Key Saved",
+        description: "Your Google AI API key has been saved successfully to the database.",
+      });
+    } else {
+      toast({
+        title: "Error Saving API Key",
+        description: "There was a problem saving your API key. Please try again.",
+        variant: "destructive",
+      });
+    }
   }
 
-  // Clear API key from localStorage
-  const clearApiKey = () => {
-    localStorage.removeItem("googleAiApiKey")
-    setApiKey("")
-    setIsDialogOpen(false)
-    toast({
-      title: "API Key Removed",
-      description: "Your Google AI API key has been removed.",
-    })
+  // Clear API key from database
+  const clearApiKey = async () => {
+    const success = await UserSettingsApi.deleteSetting("googleAiApiKey");
+    
+    if (success) {
+      setApiKey("");
+      setIsDialogOpen(false);
+      toast({
+        title: "API Key Removed",
+        description: "Your Google AI API key has been removed from the database.",
+      });
+    } else {
+      toast({
+        title: "Error Removing API Key",
+        description: "There was a problem removing your API key. Please try again.",
+        variant: "destructive",
+      });
+    }
   }
   
   // Navigate to admin dashboard
@@ -116,7 +138,7 @@ export function SettingsMenu() {
             <DialogTitle>Google AI API Key</DialogTitle>
             <DialogDescription>
               Enter your personal Google AI API key to use for AI features like prioritization and subtask generation.
-              This will be stored locally in your browser.
+              This will be stored securely in the database.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

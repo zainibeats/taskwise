@@ -23,7 +23,7 @@ export type SuggestSubtasksOutput = z.infer<typeof SuggestSubtasksOutputSchema>;
 export async function suggestSubtasks(input: SuggestSubtasksInput): Promise<SuggestSubtasksOutput> {
   try {
     // Get the current AI instance with the latest API key
-    const ai = getAI();
+    const ai = await getAI();
     
     // Define the flow and prompt inside the function to use the current AI instance
     const prompt = ai.definePrompt({

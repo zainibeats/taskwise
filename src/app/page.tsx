@@ -101,7 +101,9 @@ export default function Home() {
     const checkAuth = async () => {
       try {
         // Check if setup is required
-        const setupResponse = await fetch('/api/auth/setup-required');
+        const setupResponse = await fetch('/api/auth/setup-required', {
+          credentials: 'include', // Include cookies for authenticated requests
+        });
         if (setupResponse.ok) {
           const setupData = await setupResponse.json();
           if (setupData.setupRequired) {
@@ -111,7 +113,9 @@ export default function Home() {
         }
         
         // Check for session
-        const sessionResponse = await fetch('/api/auth/session');
+        const sessionResponse = await fetch('/api/auth/session', {
+          credentials: 'include', // Include cookies for authenticated requests
+        });
         if (sessionResponse.ok) {
           const sessionData = await sessionResponse.json();
           setIsAuthenticated(!!sessionData.user);
@@ -169,60 +173,23 @@ export default function Home() {
           setHistoryIndex(0);
           toast({ title: "Tasks loaded from database" });
         } else {
-          console.log("[DEBUG] No tasks from API, using localStorage fallback");
-          const storedTasks = getStoredTasks();
-          if (storedTasks && storedTasks.length > 0) {
-            // Check for potential ID conflicts and ensure unique keys
-            const uniqueStoredTasks = storedTasks.map(task => {
-              // If task ID is a simple numeric string (like "1"), add a prefix
-              if (/^\d+$/.test(task.id)) {
-                return {
-                  ...task,
-                  id: `local-${task.id}`,
-                  // Also update subtask IDs
-                  subtasks: task.subtasks?.map(subtask => ({
-                    ...subtask,
-                    id: `local-${subtask.id}`,
-                    task_id: `local-${task.id}`
-                  })) || []
-                };
-              }
-              return task;
-            });
-            
-            setHistory([uniqueStoredTasks]);
-            setHistoryIndex(0);
-            toast({ title: "Tasks loaded from localStorage" });
-          } else {
-            // If no tasks in localStorage, use default tasks
-            console.log("[DEBUG] Using default tasks");
-          }
+          console.log("[DEBUG] No tasks from API, using default tasks");
+          // We no longer use localStorage as fallback
+          console.log("[DEBUG] Using default tasks");
+          setHistory([defaultTasks]);
+          setHistoryIndex(0);
         }
       } catch (error) {
         console.error("[DEBUG] Error loading tasks from API:", error);
-        // Fallback to localStorage
-        const storedTasks = getStoredTasks();
-        if (storedTasks && storedTasks.length > 0) {
-          // Ensure unique IDs
-          const uniqueStoredTasks = storedTasks.map(task => {
-            if (/^\d+$/.test(task.id)) {
-              return {
-                ...task,
-                id: `local-${task.id}`,
-                subtasks: task.subtasks?.map(subtask => ({
-                  ...subtask,
-                  id: `local-${subtask.id}`,
-                  task_id: `local-${task.id}`
-                })) || []
-              };
-            }
-            return task;
-          });
-          
-          setHistory([uniqueStoredTasks]);
-          setHistoryIndex(0);
-          toast({ title: "Tasks loaded from localStorage (API error)" });
-        }
+        // Use default tasks as fallback
+        console.log("[DEBUG] Using default tasks due to API error");
+        setHistory([defaultTasks]);
+        setHistoryIndex(0);
+        toast({ 
+          title: "Error loading tasks", 
+          description: "Using default tasks",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -248,14 +215,23 @@ export default function Home() {
     toast,
   });
   
-  // Wrap pushHistory to save to both API and localStorage
+  // Wrap pushHistory to save to the database
   const pushHistory = async (newTasksState: Task[]) => {
     originalPushHistory(newTasksState);
-    // Save to localStorage as fallback
-    saveTasks(newTasksState);
     
-    // We could also update the API here if needed
-    // This would require mapping added/updated/deleted tasks and calling respective API methods
+    // Save to the database
+    try {
+      await saveTasks(newTasksState);
+      console.log("[DEBUG] Tasks saved to database");
+    } catch (error) {
+      console.error("[DEBUG] Error saving tasks to database:", error);
+      toast({
+        title: "Error saving tasks",
+        description: "Changes may not persist after reload",
+        variant: "destructive"
+      });
+    }
+    
     console.log("[DEBUG] Tasks updated in state:", newTasksState);
   };
 

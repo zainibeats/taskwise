@@ -29,7 +29,7 @@ export type PrioritizeTaskOutput = z.infer<typeof PrioritizeTaskOutputSchema>;
 export async function prioritizeTask(input: PrioritizeTaskInput): Promise<PrioritizeTaskOutput> {
   try {
     // Get the current AI instance with the latest API key
-    const ai = getAI();
+    const ai = await getAI();
     
     // Define the flow and prompt inside the function to use the current AI instance
     const prioritizeTaskPrompt = ai.definePrompt({

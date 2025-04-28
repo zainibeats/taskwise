@@ -71,6 +71,7 @@ export default function SetupPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ username, password }),
+          credentials: 'include', // Important: Include credentials for cookies
         });
       } else {
         // Regular password setup
@@ -80,6 +81,7 @@ export default function SetupPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ username, password }),
+          credentials: 'include', // Important: Include credentials for cookies
         });
       }
       
@@ -90,7 +92,16 @@ export default function SetupPage() {
           title: isFirstTimeSetup ? 'Admin account created' : 'Password set successfully',
           description: isFirstTimeSetup ? 'You can now log in with your new admin account' : 'You can now log in with your new password',
         });
-        router.push('/');
+        
+        // Set the session cookie manually if needed
+        if (data.sessionId) {
+          // Give a moment for the cookie to be properly set before redirecting
+          setTimeout(() => {
+            router.push('/');
+          }, 500);
+        } else {
+          router.push('/');
+        }
       } else {
         setError(data.error || 'Failed to process your request');
         toast({

@@ -11,9 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { clearAllData } from "@/lib/storage";
 import { useToast } from "@/hooks/use-toast";
-import { TaskApi, CategoryApi } from "@/lib/api-client";
+import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client";
 
 export function ClearAllDataButton() {
   const [open, setOpen] = useState(false);
@@ -24,9 +23,6 @@ export function ClearAllDataButton() {
     setIsClearing(true);
     
     try {
-      // Clear localStorage first
-      clearAllData();
-      
       // Clear database - get all tasks and delete them
       const tasks = await TaskApi.getAllTasks();
       console.log("[DEBUG] Found tasks to delete:", tasks.length);
@@ -54,15 +50,25 @@ export function ClearAllDataButton() {
         console.log("[DEBUG] Deleted custom categories from database:", customCategoryNames);
       }
       
+      // Clear user settings (including API key)
+      const settings = await UserSettingsApi.getAllSettings();
+      if (Object.keys(settings).length > 0) {
+        await Promise.all(
+          Object.keys(settings).map(key => UserSettingsApi.deleteSetting(key))
+        );
+        console.log("[DEBUG] Deleted user settings from database");
+      }
+      
       toast({ 
         title: "All TaskWise data deleted",
-        description: "Both local and database data has been cleared" 
+        description: "Your data has been cleared from the database" 
       });
     } catch (error) {
       console.error("[DEBUG] Error clearing database data:", error);
       toast({ 
-        title: "Local data deleted", 
-        description: "Could not clear database data" 
+        title: "Error", 
+        description: "Could not clear database data",
+        variant: "destructive"
       });
     } finally {
       setIsClearing(false);
@@ -90,7 +96,7 @@ export function ClearAllDataButton() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete all TaskWise data?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will clear all your tasks, categories, and settings from both your browser and the database. This cannot be undone. Are you sure?
+              This will clear all your tasks, categories, and settings from the database. This cannot be undone. Are you sure?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogAction 

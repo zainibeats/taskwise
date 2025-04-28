@@ -26,7 +26,7 @@ export type CategorizeTaskOutput = z.infer<typeof CategorizeTaskOutputSchema>;
 export async function categorizeTask(input: CategorizeTaskInput): Promise<CategorizeTaskOutput> {
   try {
     // Get the current AI instance with the latest API key
-    const ai = getAI();
+    const ai = await getAI();
     
     // Join categories array into a string if present
     const categoriesString = input.categories ? input.categories.join(", ") : undefined;
