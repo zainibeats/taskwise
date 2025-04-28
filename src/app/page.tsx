@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getStoredTasks, saveTasks } from "@/lib/storage";
 import { TaskApi, CategoryApi } from "@/lib/api-client"; // Import API client
 import { useUndoRedo } from "./hooks/useUndoRedo";
@@ -90,6 +90,7 @@ const initialCategoryIcons: { [key: string]: string } = {
 // Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -448,6 +449,17 @@ export default function Home() {
     selectedDate, setSelectedDate, handleClearDate, isToday
   } = useDatePicker(new Date());
 
+  // Check for admin_required error parameter
+  useEffect(() => {
+    const error = searchParams?.get('error');
+    if (error === 'admin_required') {
+      toast({
+        title: 'Access Denied',
+        description: 'You need admin privileges to access the admin dashboard.',
+        variant: 'destructive',
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
