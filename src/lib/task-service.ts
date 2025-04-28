@@ -183,13 +183,17 @@ export const taskService = {
 // Category operations
 export const categoryService = {
   // Get all categories with icons
-  getAllCategories: async (): Promise<Category[]> => {
+  getAllCategories: async (userId?: number): Promise<Category[]> => {
     if (isDevelopment) {
-      return dbService.getAllCategories();
+      return dbService.getAllCategories(userId);
     }
     
     const db = getDb();
-    return db.prepare('SELECT * FROM categories').all() as Category[];
+    if (userId) {
+      return db.prepare('SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL').all(userId) as Category[];
+    } else {
+      return db.prepare('SELECT * FROM categories').all() as Category[];
+    }
   },
 
   // Create or update a category
@@ -199,26 +203,42 @@ export const categoryService = {
     }
     
     const db = getDb();
-    const existing = db.prepare('SELECT * FROM categories WHERE name = ?').get(category.name);
+    const { name, icon, user_id } = category;
+    
+    // Check if a category with this name already exists for this user
+    const existing = db.prepare('SELECT * FROM categories WHERE name = ? AND (user_id = ? OR user_id IS NULL)').get(name, user_id);
     
     if (existing) {
-      db.prepare('UPDATE categories SET icon = ? WHERE name = ?').run(category.icon, category.name);
+      // If it's a built-in category (user_id is NULL), create a user-specific override
+      if (existing.user_id === null) {
+        db.prepare('INSERT INTO categories (name, icon, user_id) VALUES (?, ?, ?)').run(name, icon, user_id);
+      } else {
+        // Otherwise, update the existing user-specific category
+        db.prepare('UPDATE categories SET icon = ? WHERE name = ? AND user_id = ?').run(icon, name, user_id);
+      }
     } else {
-      db.prepare('INSERT INTO categories (name, icon) VALUES (?, ?)').run(category.name, category.icon);
+      // Create a new user-specific category
+      db.prepare('INSERT INTO categories (name, icon, user_id) VALUES (?, ?, ?)').run(name, icon, user_id);
     }
     
     return category;
   },
 
   // Delete a category
-  deleteCategory: async (name: string): Promise<boolean> => {
+  deleteCategory: async (name: string, userId?: number): Promise<boolean> => {
     if (isDevelopment) {
-      await dbService.deleteCategory(name);
-      return true;
+      return dbService.deleteCategory(name, userId);
     }
     
     const db = getDb();
-    const result = db.prepare('DELETE FROM categories WHERE name = ?').run(name);
-    return result.changes > 0;
+    
+    // Only allow deleting user-specific categories, not built-in ones
+    if (userId) {
+      const result = db.prepare('DELETE FROM categories WHERE name = ? AND user_id = ?').run(name, userId);
+      return result.changes > 0;
+    } else {
+      const result = db.prepare('DELETE FROM categories WHERE name = ?').run(name);
+      return result.changes > 0; 
+    }
   }
 }; 
