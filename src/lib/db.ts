@@ -211,14 +211,22 @@ export const dbService = {
   }),
   
   // Categories
-  getAllCategories: () => fetchFromService('/api/categories'),
+  getAllCategories: (userId?: number) => {
+    const endpoint = userId ? `/api/categories?userId=${userId}` : '/api/categories';
+    return fetchFromService(endpoint);
+  },
   saveCategory: (category: any) => fetchFromService('/api/categories', {
     method: 'POST',
     body: JSON.stringify(category),
   }),
-  deleteCategory: (name: string) => fetchFromService(`/api/categories?name=${encodeURIComponent(name)}`, {
-    method: 'DELETE',
-  }),
+  deleteCategory: (name: string, userId?: number) => {
+    const endpoint = userId 
+      ? `/api/categories?name=${encodeURIComponent(name)}&userId=${userId}`
+      : `/api/categories?name=${encodeURIComponent(name)}`;
+    return fetchFromService(endpoint, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Export the singleton getter
