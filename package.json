@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "dev:with-db": "concurrently \"node db/connection.js\" \"next dev --turbopack -p 9002\"",
+    "dev": "next dev -p 9002",
+    "dev:with-db": "concurrently \"node db/connection.js\" \"next dev -p 9002\"",
     "db:start": "node db/connection.js",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up",
     "docker:build": "docker-compose build",
@@ -80,6 +80,7 @@
     "@types/uuid": "^9.0.8",
     "concurrently": "^9.1.2",
     "genkit-cli": "^1.0.4",
+    "null-loader": "^4.0.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
