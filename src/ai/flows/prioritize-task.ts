@@ -1,22 +1,22 @@
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow for prioritizing tasks based on deadlines and importance.
+ * @fileOverview A task prioritization AI agent.
  *
- * - prioritizeTask - A function that takes a task and its deadline and importance as input, and returns a priority score.
+ * - prioritizeTask - A function that calculates the priority of a task based on deadline, importance, and category.
  * - PrioritizeTaskInput - The input type for the prioritizeTask function.
  * - PrioritizeTaskOutput - The return type for the prioritizeTask function.
  */
 
-import { getAI } from '@/ai/ai-instance';
-import {z} from 'genkit';
-// Keep date-fns imports if needed elsewhere, or remove if only used for the deleted calculation
-// import { isPast, format, parseISO, differenceInDays } from 'date-fns';
+import { getServerAI } from '@/ai/server-ai-instance';
+import { z } from 'genkit';
+import { isPast, differenceInDays } from 'date-fns';
 
 const PrioritizeTaskInputSchema = z.object({
   task: z.string().describe('The task to prioritize.'),
   deadline: z.string().describe('The deadline for the task (e.g., YYYY-MM-DD).'),
   importance: z.number().describe('The user-defined importance of the task (1-10, 10 being most important).'),
   category: z.string().describe('The category of the task (e.g., Work, Personal, Health).'),
+  userId: z.number().optional().describe('The user ID to get the API key for.'),
 });
 export type PrioritizeTaskInput = z.infer<typeof PrioritizeTaskInputSchema>;
 
@@ -28,8 +28,17 @@ export type PrioritizeTaskOutput = z.infer<typeof PrioritizeTaskOutputSchema>;
 
 export async function prioritizeTask(input: PrioritizeTaskInput): Promise<PrioritizeTaskOutput> {
   try {
+    // Log that we're trying to prioritize with a specific user ID
+    console.log(`Attempting to prioritize task with user ID: ${input.userId || 'none'}`);
+    
     // Get the current AI instance with the latest API key
-    const ai = await getAI();
+    let ai;
+    try {
+      ai = await getServerAI(input.userId);
+    } catch (aiError) {
+      console.error("Error initializing AI with user API key:", aiError);
+      throw new Error(`AI initialization failed: ${aiError instanceof Error ? aiError.message : String(aiError)}`);
+    }
     
     // Define the flow and prompt inside the function to use the current AI instance
     const prioritizeTaskPrompt = ai.definePrompt({
@@ -48,33 +57,36 @@ export async function prioritizeTask(input: PrioritizeTaskInput): Promise<Priori
           reasoning: z.string().describe('The AI reasoning behind the assigned priority score.'),
         }),
       },
-      prompt: `You are an AI task prioritization expert. Calculate a final priority score (1-100, 100 being highest priority) for the given task and explain your reasoning.
+      prompt: `You are a task prioritization expert. Given the following task information, assign a priority score from 1 to 100 (higher being more urgent) and explain your reasoning.
 
-Consider these factors:
-1.  **User Importance (1-10):** This is the primary driver. A base score can be derived from this (e.g., importance * 8 or importance * 9).
-2.  **Deadline Proximity:** Tasks with closer deadlines should generally have higher priority. Calculate the days until the deadline (today's date is ${new Date().toISOString().split('T')[0]}).
-3.  **Category Context:** The urgency added by a close deadline should be heavily modulated by the category. A deadline for "Health" or "Work" adds significant urgency. A deadline for "Personal" or "Social" adds much less urgency. Use these baseline urgency weights (feel free to adjust slightly based on task specifics):
-    - Health: 1.5
-    - Finance: 1.3
-    - Work: 1.2
-    - Personal: 1.0
-    - Errands: 0.9
-    - Other: 0.8
-4.  **Overall Balance:** Ensure the final score reflects a balanced view. A low-importance task ("Play chess") should not get a very high score (e.g., > 60) just because it's due today, unless the task description implies unusual significance. Conversely, a high-importance task far in the future should still retain a reasonable base priority.
-5.  **Score Range:** Ensure the final score is strictly between 1 and 100.
-
-Task: {{{task}}}
+Task title: {{{task}}}
 Deadline: {{{deadline}}}
-Importance: {{{importance}}}
+User-defined importance: {{{importance}}} (1-10 scale)
 Category: {{{category}}}
 
-Generate the priorityScore and reasoning.`,
+Considerations:
+1. Tasks with closer deadlines should have higher priority scores.
+2. Tasks with higher user-defined importance should have higher priority scores.
+3. Different categories should influence priority:
+   - Health tasks should generally have the highest priority multiplier (1.5)
+   - Finance tasks should have a high priority multiplier (1.3) 
+   - Work tasks should have a moderately high priority multiplier (1.2)
+   - Personal tasks should have a standard priority multiplier (1.0)
+   - Errands should have a slightly lower priority multiplier (0.9)
+   - Other tasks should have the lowest priority multiplier (0.8)
+4. Consider the absolute deadline (how soon it is) but also the appropriateness of urgency for the category.
+   - A work deadline of 2 days might deserve high urgency (90+)
+   - A personal errand with same deadline might warrant moderate urgency (70-80)
+5. Balance these considerations to provide a reasonable priority score.
+
+Provide:
+1. A priority score (number between 1-100)
+2. Brief reasoning for this score
+
+Priority score: `,
     });
 
-    const prioritizeTaskFlow = ai.defineFlow<
-      typeof PrioritizeTaskInputSchema,
-      typeof PrioritizeTaskOutputSchema
-    >(
+    const prioritizeTaskFlow = ai.defineFlow<typeof PrioritizeTaskInputSchema, typeof PrioritizeTaskOutputSchema>(
       {
         name: 'prioritizeTaskFlow',
         inputSchema: PrioritizeTaskInputSchema,
@@ -82,22 +94,58 @@ Generate the priorityScore and reasoning.`,
       },
       async input => {
         const { output } = await prioritizeTaskPrompt(input);
-
-        // Optional: Add validation here to ensure AI output conforms to schema
-        if (!output || typeof output.priorityScore !== 'number' || output.priorityScore < 1 || output.priorityScore > 100) {
-            console.error("AI failed to return a valid priority score:", output);
-            // Return a default or throw an error
-            return { priorityScore: 50, reasoning: "AI failed to provide a valid score, assigned default." };
-        }
-        return output;
+        return output!;
       }
     );
-
+    
     // Run the flow with the input
-    return await prioritizeTaskFlow(input);
+    const result = await prioritizeTaskFlow(input);
+    return result;
   } catch (error) {
     console.error("Error in prioritizeTask:", error);
-    // Return a fallback value in case of error
-    return { priorityScore: 50, reasoning: "Error occurred during prioritization. Using default value." };
+    
+    // Calculate category multiplier for fallback calculation
+    const getCategoryMultiplier = (category: string): number => {
+      const lowerCategory = category.toLowerCase();
+      if (lowerCategory.includes('health')) return 1.5;
+      if (lowerCategory.includes('finance')) return 1.3;
+      if (lowerCategory.includes('work')) return 1.2;
+      if (lowerCategory.includes('personal')) return 1.0;
+      if (lowerCategory.includes('errand')) return 0.9;
+      return 0.8; // default/other
+    };
+    
+    // Provide a fallback priority score based on more comprehensive heuristics
+    const now = new Date();
+    const deadline = new Date(input.deadline);
+    
+    // Handle past deadlines
+    if (isPast(deadline)) {
+      return {
+        priorityScore: 95,
+        reasoning: "Fallback calculation: Task deadline has already passed, marking as very high priority.",
+      };
+    }
+    
+    const daysUntilDeadline = differenceInDays(deadline, now);
+    const categoryMultiplier = getCategoryMultiplier(input.category);
+    
+    // Base score starts at 80 for urgent tasks (due today)
+    // Reduced by 5 points per day until deadline, but never below 10
+    const deadlineScore = Math.max(10, 80 - (daysUntilDeadline * 5));
+    
+    // Importance contributes up to 20 points (scaled from 1-10 input)
+    const importanceScore = input.importance * 2;
+    
+    // Calculate total score with category multiplier
+    let priorityScore = (deadlineScore + importanceScore) * categoryMultiplier;
+    
+    // Ensure the priority is within 1-100
+    priorityScore = Math.max(1, Math.min(100, Math.round(priorityScore)));
+    
+    return {
+      priorityScore,
+      reasoning: `Fallback calculation due to AI service error. Score based on: ${daysUntilDeadline} days until deadline (${deadlineScore} points), user importance ${input.importance} (${importanceScore} points), and category "${input.category}" (multiplier: ${categoryMultiplier.toFixed(1)}).`,
+    };
   }
 }

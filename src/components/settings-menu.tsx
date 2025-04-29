@@ -67,15 +67,55 @@ export function SettingsMenu() {
 
   // Save API key to database
   const saveApiKey = async () => {
+    console.log("Attempting to save API key, length:", apiKey.length);
+    
+    // Basic validation for Google AI API keys
+    // This won't catch all invalid keys but helps prevent obvious errors
+    if (apiKey && !apiKey.startsWith('AI')) {
+      console.warn("API key doesn't start with 'AI', which is unusual for Google AI API keys");
+      toast({
+        title: "Warning: Unusual API Key Format",
+        description: "Google AI API keys typically start with 'AI'. Your key may not work correctly.",
+        variant: "destructive",
+      });
+    }
+    
+    if (apiKey && apiKey.length < 30) {
+      console.warn("API key is suspiciously short:", apiKey.length);
+      toast({
+        title: "Warning: Key Too Short",
+        description: "Your API key seems too short. Google AI keys are typically longer.",
+        variant: "destructive",
+      });
+    }
+    
     const success = await UserSettingsApi.saveSetting("googleAiApiKey", apiKey);
     
     if (success) {
       setIsDialogOpen(false);
+      console.log("API key saved successfully to database");
       toast({
         title: "API Key Saved",
         description: "Your Google AI API key has been saved successfully to the database.",
       });
+      
+      // Confirm the key was saved by retrieving it
+      setTimeout(async () => {
+        const savedKey = await UserSettingsApi.getSetting("googleAiApiKey");
+        if (savedKey && savedKey === apiKey) {
+          console.log("API key verified in database");
+        } else {
+          console.error("API key verification failed - key in DB doesn't match or is missing");
+          console.log("Original key length:", apiKey.length, "Saved key length:", savedKey?.length || 0);
+          toast({
+            title: "Warning",
+            description: "The API key may not have been saved correctly. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }, 1000);
     } else {
+      console.error("Failed to save API key to database");
       toast({
         title: "Error Saving API Key",
         description: "There was a problem saving your API key. Please try again.",

@@ -7,11 +7,12 @@
  * - SuggestSubtasksOutput - The output type for the suggestSubtasks function.
  */
 
-import { getAI } from '@/ai/ai-instance';
+import { getServerAI } from '@/ai/server-ai-instance';
 import { z } from 'genkit';
 
 const SuggestSubtasksInputSchema = z.object({
   taskDescription: z.string().describe('The description of the main task.'),
+  userId: z.number().optional().describe('The user ID to get the API key for.'),
 });
 export type SuggestSubtasksInput = z.infer<typeof SuggestSubtasksInputSchema>;
 
@@ -22,8 +23,11 @@ export type SuggestSubtasksOutput = z.infer<typeof SuggestSubtasksOutputSchema>;
 
 export async function suggestSubtasks(input: SuggestSubtasksInput): Promise<SuggestSubtasksOutput> {
   try {
+    // Log that we're trying to suggest subtasks with a specific user ID
+    console.log(`Attempting to suggest subtasks with user ID: ${input.userId || 'none'}`);
+    
     // Get the current AI instance with the latest API key
-    const ai = await getAI();
+    const ai = await getServerAI(input.userId);
     
     // Define the flow and prompt inside the function to use the current AI instance
     const prompt = ai.definePrompt({

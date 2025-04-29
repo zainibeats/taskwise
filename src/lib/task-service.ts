@@ -1,5 +1,8 @@
 import getDbConnection, { dbService } from './db';
 import { Task, Subtask, Category } from '../app/types';
+import { categorizeTask } from '@/ai/flows/categorize-task';
+import { prioritizeTask } from '@/ai/flows/prioritize-task';
+import { suggestSubtasks } from '@/ai/flows/suggest-subtasks';
 
 // Determine if we're in development mode
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -41,23 +44,88 @@ export const taskService = {
   },
 
   // Create a new task
-  createTask: async (task: Omit<Task, 'id'>): Promise<Task> => {
+  createTask: async (task: Omit<Task, 'id'>, userId?: number): Promise<Task> => {
     if (isDevelopment) {
-      return dbService.createTask(task);
+      return dbService.createTask(task, userId);
     }
     
     const db = getDb();
     const { title, description, deadline, importance, category, priority_score, is_completed = false, subtasks = [] } = task;
     
+    // If no category is provided, try to categorize the task using AI
+    let taskCategory = category;
+    let taskPriorityScore = priority_score;
+    
+    if (!taskCategory && title) {
+      try {
+        console.log(`Attempting to categorize task '${title}' with user ID: ${userId || 'none'}`);
+        const result = await categorizeTask({ 
+          taskDescription: title + (description ? ` - ${description}` : ''),
+          userId 
+        });
+        taskCategory = result.category;
+      } catch (error) {
+        console.error('Error categorizing task:', error);
+        taskCategory = 'Other'; // Default to 'Other' if categorization fails
+      }
+    }
+    
+    // If no priority score is provided, calculate it using AI
+    if (!taskPriorityScore && title) {
+      try {
+        console.log(`Attempting to prioritize task '${title}' with user ID: ${userId || 'none'}`);
+        const result = await prioritizeTask({
+          task: title,
+          deadline: deadline || '',
+          importance: importance || 5,
+          category: taskCategory || 'Other',
+          userId
+        });
+        taskPriorityScore = result.priorityScore;
+        console.log(`Successfully prioritized task with score: ${taskPriorityScore}`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        // Check for specific error messages that might indicate API key problems
+        if (errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('API key') || errorMsg.includes('authentication')) {
+          console.error('API key error when prioritizing task:', errorMsg);
+          // Will fall back to default priority below
+        } else {
+          console.error('Error prioritizing task:', error);
+        }
+        taskPriorityScore = 50; // Default to medium priority if prioritization fails
+      }
+    }
+    
+    // Insert the task with user ID
     const result = db.prepare(`
-      INSERT INTO tasks (title, description, deadline, importance, category, priority_score, is_completed)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(title, description, deadline, importance, category, priority_score, is_completed ? 1 : 0);
+      INSERT INTO tasks (title, description, deadline, importance, category, priority_score, is_completed, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(title, description, deadline, importance, taskCategory, taskPriorityScore, is_completed ? 1 : 0, userId || null);
     
     const taskId = result.lastInsertRowid as number;
     
-    // Add subtasks if any
-    if (subtasks.length > 0) {
+    // If no subtasks are provided and we have a title, try to generate them
+    if (subtasks.length === 0 && title) {
+      try {
+        console.log(`Attempting to suggest subtasks for task '${title}' with user ID: ${userId || 'none'}`);
+        const result = await suggestSubtasks({
+          taskDescription: title + (description ? ` - ${description}` : ''),
+          userId
+        });
+        
+        if (result.subtasks && result.subtasks.length > 0) {
+          const insertSubtask = db.prepare('INSERT INTO subtasks (task_id, description, is_completed) VALUES (?, ?, ?)');
+          
+          result.subtasks.forEach((subtaskText) => {
+            insertSubtask.run(taskId, subtaskText, 0);
+          });
+        }
+      } catch (error) {
+        console.error('Error generating subtasks:', error);
+        // Continue without subtasks if generation fails
+      }
+    } else if (subtasks.length > 0) {
+      // Add provided subtasks if any
       const insertSubtask = db.prepare('INSERT INTO subtasks (task_id, description, is_completed) VALUES (?, ?, ?)');
       
       subtasks.forEach((subtask: Subtask) => {
@@ -206,7 +274,7 @@ export const categoryService = {
     const { name, icon, user_id } = category;
     
     // Check if a category with this name already exists for this user
-    const existing = db.prepare('SELECT * FROM categories WHERE name = ? AND (user_id = ? OR user_id IS NULL)').get(name, user_id);
+    const existing = db.prepare('SELECT * FROM categories WHERE name = ? AND (user_id = ? OR user_id IS NULL)').get(name, user_id) as { user_id: number | null } | undefined;
     
     if (existing) {
       // If it's a built-in category (user_id is NULL), create a user-specific override

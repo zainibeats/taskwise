@@ -354,14 +354,22 @@ export const UserSettingsApi = {
    */
   async getAllSettings(): Promise<Record<string, string>> {
     try {
+      console.log("Fetching all user settings");
       const response = await fetch(`${API_BASE_URL}/api/user-settings`, {
         credentials: 'include', // Include cookies for authentication
       });
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          console.error("Authentication error fetching settings - not logged in");
+          return {};
+        }
         throw new Error(`Failed to fetch settings: ${response.status}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log(`Got ${Object.keys(data).length} settings`);
+      return data;
     } catch (error) {
       console.error('Error fetching user settings:', error);
       return {};
@@ -375,17 +383,25 @@ export const UserSettingsApi = {
    */
   async getSetting(key: string): Promise<string | null> {
     try {
+      console.log(`Fetching setting: ${key}`);
       const response = await fetch(`${API_BASE_URL}/api/user-settings/${encodeURIComponent(key)}`, {
         credentials: 'include', // Include cookies for authentication
       });
+      
       if (!response.ok) {
         if (response.status === 404) {
+          console.log(`Setting not found: ${key}`);
           return null; // Setting not found
+        }
+        if (response.status === 401) {
+          console.error(`Authentication error fetching setting: ${key} - not logged in`);
+          return null;
         }
         throw new Error(`Failed to fetch setting: ${response.status}`);
       }
       
       const result = await response.json();
+      console.log(`Got setting ${key}, value length: ${result.value?.length || 0}`);
       return result.value;
     } catch (error) {
       console.error(`Error fetching setting '${key}':`, error);
@@ -401,6 +417,7 @@ export const UserSettingsApi = {
    */
   async saveSetting(key: string, value: string): Promise<boolean> {
     try {
+      console.log(`Saving setting: ${key}, value length: ${value?.length || 0}`);
       const response = await fetch(`${API_BASE_URL}/api/user-settings`, {
         method: 'POST',
         headers: {
@@ -411,9 +428,17 @@ export const UserSettingsApi = {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          console.error(`Authentication error saving setting: ${key} - not logged in`);
+          return false;
+        }
+        
+        const errorText = await response.text();
+        console.error(`Error response from server (${response.status}):`, errorText);
         throw new Error(`Failed to save setting: ${response.status}`);
       }
 
+      console.log(`Successfully saved setting: ${key}`);
       return true;
     } catch (error) {
       console.error(`Error saving setting '${key}':`, error);
@@ -428,15 +453,21 @@ export const UserSettingsApi = {
    */
   async deleteSetting(key: string): Promise<boolean> {
     try {
+      console.log(`Deleting setting: ${key}`);
       const response = await fetch(`${API_BASE_URL}/api/user-settings/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for authentication
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          console.error(`Authentication error deleting setting: ${key} - not logged in`);
+          return false;
+        }
         throw new Error(`Failed to delete setting: ${response.status}`);
       }
 
+      console.log(`Successfully deleted setting: ${key}`);
       return true;
     } catch (error) {
       console.error(`Error deleting setting '${key}':`, error);

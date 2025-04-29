@@ -458,32 +458,79 @@ export default function Home() {
     };
 
     try {
+      // Get current session to extract user ID
+      const sessionResponse = await fetch('/api/auth/session', {
+        credentials: 'include',  // Make sure to include credentials for auth
+      });
+      let userId: number | undefined = undefined;
+      
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        userId = sessionData.user?.id;
+        console.log("Using user ID for AI operations:", userId);
+      } else {
+        console.warn("Failed to get user session:", sessionResponse.status);
+        toast({
+          title: "Authentication issue",
+          description: "Could not verify your identity. AI features may not work correctly.",
+          variant: "destructive"
+        });
+      }
+
       // --- AI Categorization (if needed) ---
       if (!taskCategory) {
-        // If no category selected, use AI to suggest one from all categories (built-in + custom)
-        const aiCategory = await categorizeTask({
-          taskDescription: newTask.title,
-          categories: allCategories,
-        });
-        newTask.category = aiCategory.category;
+        try {
+          // If no category selected, use AI to suggest one from all categories (built-in + custom)
+          const aiCategory = await categorizeTask({
+            taskDescription: newTask.title,
+            categories: allCategories,
+            userId: userId,
+          });
+          newTask.category = aiCategory.category;
+        } catch (error) {
+          console.error("AI categorization failed:", error);
+          newTask.category = "Other"; // Default fallback
+          toast({
+            title: "AI categorization unavailable",
+            description: "Using 'Other' category. Check your API key in settings.",
+            variant: "destructive"
+          });
+        }
       }
 
       // Ensure we have a category for prioritization (default to "Other" if AI fails)
       const categoryForPrioritization = newTask.category || "Other";
 
       // --- AI Prioritization & Subtasks ---
-      // Run AI flows for priority score and subtask suggestions in parallel
-      const [priorityResult, subtasksResult] = await Promise.all([
-        prioritizeTask({
-          task: newTask.title,
-          deadline: newTask.deadline?.toISOString() || new Date().toISOString(),
-          importance: 5, // Default importance for now
-          category: categoryForPrioritization, // Use determined category
-        }),
-        suggestSubtasks({
-          taskDescription: newTask.title,
-        })
-      ]);
+      let priorityResult, subtasksResult;
+      
+      try {
+        // Run AI flows for priority score and subtask suggestions in parallel
+        [priorityResult, subtasksResult] = await Promise.all([
+          prioritizeTask({
+            task: newTask.title,
+            deadline: newTask.deadline?.toISOString() || new Date().toISOString(),
+            importance: 5, // Default importance for now
+            category: categoryForPrioritization, // Use determined category
+            userId: userId,
+          }),
+          suggestSubtasks({
+            taskDescription: newTask.title,
+            userId: userId,
+          })
+        ]);
+      } catch (error) {
+        console.error("AI prioritization or subtasks generation failed:", error);
+        // Create fallback values
+        priorityResult = { priorityScore: 50, reasoning: "Default priority (AI unavailable)" };
+        subtasksResult = { subtasks: [] };
+        
+        toast({
+          title: "AI features unavailable",
+          description: "Using default values. Check your API key in settings.",
+          variant: "destructive"
+        });
+      }
 
       // Update task with AI results (priority and subtasks)
       newTask.priority = priorityResult.priorityScore;
@@ -511,6 +558,12 @@ export default function Home() {
         console.error("[DEBUG] API error creating task:", apiError);
         // Fallback to local state only if API fails
         pushHistory([...tasks, newTask]);
+        
+        toast({
+          title: "Database error",
+          description: "Task saved locally only, may not persist across devices",
+          variant: "destructive"
+        });
       }
 
       // Reset form inputs for next task entry
@@ -527,6 +580,7 @@ export default function Home() {
       toast({
         title: "Failed to add task",
         description: "An error occurred while processing your task.",
+        variant: "destructive"
       });
     } finally {
       setIsAiLoading(false);

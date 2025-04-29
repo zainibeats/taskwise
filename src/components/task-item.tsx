@@ -40,11 +40,20 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onUpdateTask }) => {
     
     setIsRegenerating(true);
     try {
+      // Get current session to extract user ID
+      const sessionResponse = await fetch('/api/auth/session');
+      let userId: number | undefined = undefined;
+      
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        userId = sessionData.user?.id;
+      }
+      
       // Call the AI function to generate new subtasks
-      // NOTE: The suggestSubtasks function expects an object with 'taskDescription', not 'taskTitle'. 
-      // We should adjust this call based on the actual signature of suggestSubtasks.
-      // Assuming it needs { taskDescription: string }
-      const result = await suggestSubtasks({ taskDescription: task.title }); 
+      const result = await suggestSubtasks({ 
+        taskDescription: task.title,
+        userId: userId
+      }); 
       
       // Create subtask objects from the suggestions
       const newSubtasks = result.subtasks.map((title, index) => ({

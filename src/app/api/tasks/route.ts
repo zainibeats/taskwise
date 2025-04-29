@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { taskService } from '@/lib/task-service';
+import { getUserFromSession } from '@/lib/auth-utils';
 
 // Set CORS headers helper
 function setCorsHeaders(response: NextResponse) {
@@ -33,6 +34,10 @@ export async function GET() {
 // POST /api/tasks - Create a new task
 export async function POST(request: NextRequest) {
   try {
+    // Get the user from the session
+    const user = await getUserFromSession(request);
+    const userId = user?.id;
+    
     const taskData = await request.json();
     
     // Validate required fields
@@ -40,7 +45,8 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(NextResponse.json({ error: 'Title is required' }, { status: 400 }));
     }
     
-    const task = await taskService.createTask(taskData);
+    // Create task with user ID
+    const task = await taskService.createTask(taskData, userId);
     return setCorsHeaders(NextResponse.json(task, { status: 201 }));
   } catch (error) {
     console.error('Error creating task:', error);

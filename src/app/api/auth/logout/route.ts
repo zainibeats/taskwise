@@ -4,7 +4,7 @@ import { deleteSession, getSessionFromCookie } from '@/lib/session';
 export async function POST(req: NextRequest) {
   try {
     // Get session ID from cookie
-    const sessionId = getSessionFromCookie();
+    const sessionId = await getSessionFromCookie();
     
     if (sessionId) {
       // Delete session from database

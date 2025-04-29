@@ -97,6 +97,20 @@ function initDb(db: Database.Database) {
     )
   `);
 
+  // Create user_settings table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, key)
+    )
+  `);
+
   // Create tasks table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
@@ -178,6 +192,22 @@ function migrateExistingData(db: Database.Database) {
   } catch (error) {
     // Table doesn't exist yet or other error, skip
   }
+
+  // Check if we need to add value column to user_settings
+  try {
+    // Try to get a setting and check if value column exists
+    const testQuery = db.prepare("SELECT value FROM user_settings LIMIT 1");
+    try {
+      testQuery.get();
+    } catch (error) {
+      // If error, we need to add the column
+      console.log('Migrating user_settings table to add value column');
+      db.exec("ALTER TABLE user_settings ADD COLUMN value TEXT");
+    }
+  } catch (error) {
+    // Table doesn't exist yet or other error, skip
+    console.log('Error checking user_settings table:', error);
+  }
 }
 
 // Graceful shutdown handler
@@ -195,9 +225,9 @@ export const dbService = {
   // Tasks
   getAllTasks: () => fetchFromService('/api/tasks'),
   getTaskById: (id: number) => fetchFromService(`/api/tasks/${id}`),
-  createTask: (task: any) => fetchFromService('/api/tasks', {
+  createTask: (task: any, userId?: number) => fetchFromService('/api/tasks', {
     method: 'POST',
-    body: JSON.stringify(task),
+    body: JSON.stringify({ ...task, userId }),
   }),
   updateTask: (id: number, updates: any) => fetchFromService(`/api/tasks/${id}`, {
     method: 'PUT',
