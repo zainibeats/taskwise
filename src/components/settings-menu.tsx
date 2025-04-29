@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { User } from "lucide-react"
+import { LogOut, User } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -109,6 +109,38 @@ export function SettingsMenu() {
     router.push('/admin')
   }
 
+  // Logout user
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Logged Out",
+          description: "You have been successfully logged out.",
+        });
+        // Redirect to login page
+        router.push('/login');
+      } else {
+        toast({
+          title: "Logout Error",
+          description: "There was a problem logging out. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "There was a problem logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -129,6 +161,11 @@ export function SettingsMenu() {
               Admin Dashboard
             </DropdownMenuItem>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Log Out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
