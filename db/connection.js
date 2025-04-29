@@ -177,10 +177,23 @@ async function parseJsonBody(req) {
 async function getUserIdFromSession(req) {
   // Get session ID from cookies
   const cookies = req.headers.cookie || '';
-  const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('taskwise_session='));
-  const sessionId = sessionCookie ? sessionCookie.split('=')[1].trim() : null;
+  
+  console.log("[DEBUG] Received cookies:", cookies);
+  
+  // Parse cookies into an object
+  const cookieObj = cookies.split(';').reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split('=');
+    if (key && value) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+  
+  const sessionId = cookieObj['taskwise_session'];
+  console.log("[DEBUG] Extracted sessionId:", sessionId);
   
   if (!sessionId) {
+    console.log("[DEBUG] No session ID found in cookies");
     return null;
   }
   
@@ -188,24 +201,29 @@ async function getUserIdFromSession(req) {
   const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
   
   if (!session) {
+    console.log("[DEBUG] No session found in database for ID:", sessionId);
     return null;
   }
   
   // Check if session is expired
   if (new Date(session.expires) < new Date()) {
+    console.log("[DEBUG] Session expired:", session.expires);
     db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
     return null;
   }
   
+  console.log("[DEBUG] Valid session found for user ID:", session.user_id);
   return session.user_id;
 }
 
 // Create HTTP server to handle database operations
 const server = http.createServer(async (req, res) => {
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin || 'http://localhost:9002';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
