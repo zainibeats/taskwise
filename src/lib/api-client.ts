@@ -2,7 +2,12 @@ import { Task } from "@/app/types/task";
 import { Category } from "@/app/types";
 
 // Base URL for API - use environment variable in production
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100';
+// In browser, use the current origin + :3100 if localhost
+const API_BASE_URL = typeof window !== 'undefined' 
+  ? (window.location.hostname === 'localhost' 
+    ? 'http://localhost:3100' 
+    : window.location.origin.replace(/:\d+$/, ':3100'))
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
 
 /**
  * Task API client functions
