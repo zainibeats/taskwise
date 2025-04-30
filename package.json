@@ -15,6 +15,7 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
     "start": "next start",
+    "start:with-db": "concurrently \"node db/connection.js\" \"next start -p 9002\"",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "sync-users": "node scripts/sync-users.js",
