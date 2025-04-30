@@ -89,7 +89,7 @@ const initialCategoryIcons: { [key: string]: string } = {
 };
 
 // Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
-export default function Home() {
+function TaskWiseApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -1006,3 +1006,16 @@ const AlertDialogFooter = ({
   />
 )
 AlertDialogFooter.displayName = "AlertDialogFooter"
+
+// Main component that wraps the app with Suspense
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <p>Loading...</p>
+      </div>
+    }>
+      <TaskWiseApp />
+    </Suspense>
+  );
+}
