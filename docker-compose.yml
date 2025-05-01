@@ -21,6 +21,7 @@ services:
         limits:
           memory: 2G  # Ensure enough memory for build/runtime
     restart: unless-stopped
+    container_name: taskwise
     volumes:
       - taskwise-data:/app/data  # Persists your database using a named volume
       - taskwise-logs:/app/logs  # Stores logs in a named volume
