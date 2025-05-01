@@ -66,7 +66,7 @@ This guide provides detailed instructions for self-hosting the TaskWise applicat
    Follow the prompts to enter username, email, and password for the admin.
 
 6. **Access the application**
-   Open a browser and navigate to `http://YOUR_SERVER_IP:3000`
+   Open a browser and navigate to `http://YOUR_SERVER_IP:9002`
 
 ## User Management
 
@@ -176,6 +176,44 @@ If you notice that tasks are only saved to localStorage when accessing from devi
    - Check the console for any CORS or network errors
    - Verify that API requests are going to your server IP, not to localhost
 
+## Docker Build Issues
+
+If you encounter issues during the Docker build process:
+
+### Symptom: Build Fails with bcrypt or SQLite Errors
+
+Native Node.js modules like bcrypt and better-sqlite3 require compilation and may cause build failures in Docker.
+
+### Solution:
+
+1. **Memory Allocation**
+   - Ensure Docker has enough memory allocated (at least 2GB recommended)
+   - On Docker Desktop, check Settings > Resources > Memory
+
+2. **Node.js Version Compatibility**
+   - Both Node.js 20 and Node.js 18 can work depending on your environment
+   - If you encounter issues with Node.js 20, try switching to Node.js 18 which has proven more compatible with native dependencies in some setups
+   - Edit the Dockerfile first line to change: `FROM node:20-alpine` to `FROM node:18-alpine`
+
+3. **Rebuilding Native Modules**
+   - For persistent issues with bcrypt, try adding these build arguments to your docker-compose.yml:
+     ```yaml
+     services:
+       taskwise:
+         build:
+           args:
+             - BCRYPT_FORCE_REBUILD=1
+             - npm_config_build_from_source=true
+     ```
+
+4. **Clean Build**
+   - If all else fails, try a clean build:
+     ```bash
+     docker-compose down
+     docker-compose build --no-cache
+     docker-compose up -d
+     ```
+
 ## Using a Domain Name
 
 For a production deployment, you may want to use a domain name instead of an IP address.
@@ -239,7 +277,7 @@ To update to a new version of TaskWise:
    - Consider using Docker secrets or a dedicated environment variable management solution
 
 2. **Firewall Configuration**
-   - Only expose the necessary ports (3000 for web UI, 3100 for API)
+   - Only expose the necessary ports (9002 for web UI, 3100 for API)
    - Consider limiting access to trusted IP ranges
 
 3. **Regular Updates**

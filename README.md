@@ -23,7 +23,7 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
 
 ### Prerequisites
 
-- Node.js v16 or newer
+- Node.js v16 or newer (Node.js 18 or 20 recommended for Docker deployments)
 - npm or yarn package manager
 
 ### Installation
@@ -64,7 +64,20 @@ TaskWise is an intelligent todo list application that uses AI to help you manage
    npm run dev        # In another terminal
    ```
 
-5. Open [http://localhost:9002](http://localhost:9002) in your browser to see the application.
+5. For production use after building the app:
+   ```bash
+   # Build the application
+   npm run build
+   
+   # Run both database service and production Next.js in one command
+   npm run start:with-db
+   
+   # Or run them separately
+   npm run db:start   # In one terminal
+   npm start          # In another terminal
+   ```
+
+6. Open [http://localhost:9002](http://localhost:9002) in your browser to see the application.
 
 ## 🔒 User Authentication
 
@@ -106,8 +119,6 @@ Once you have an admin account:
 2. Navigate to `/admin` to access the admin dashboard
 3. Use the dashboard to create, edit, or deactivate user accounts
 
-For detailed user management instructions, see [User Management Guide](docs/user-management-guide.md).
-
 ## 🔒 Data Storage Approach
 
 TaskWise uses SQLite for task persistence, which means:
@@ -132,7 +143,35 @@ TaskWise can be self-hosted on your own server. For detailed instructions, see t
 - Security considerations
 - Data backup strategies
 
-For SSL setup instructions, see the [SSL Setup Guide](docs/ssl-setup-guide.md).
+### Docker Deployment
+
+The easiest way to deploy TaskWise is using Docker Compose:
+
+```bash
+# Clone the repository
+git clone https://github.com/zainibeats/taskwise
+cd taskwise
+
+# Create .env file with your Google AI API key
+echo "GOOGLE_AI_API_KEY=your_key_here" > .env
+
+# Edit docker-compose.yml to set your server's IP address
+# Replace "localhost" with your actual IP or hostname in NEXT_PUBLIC_API_URL
+
+# Start the containers
+docker-compose up -d
+```
+
+#### Docker Troubleshooting
+
+If you encounter build issues:
+
+1. Make sure your Docker has at least 2GB of memory allocated
+2. If you encounter native module errors with Node.js 20, try using Node.js 18 by changing the first line in Dockerfile
+3. For cross-platform deployment issues with bcrypt or SQLite, try rebuilding with:
+   ```bash
+   docker-compose build --no-cache taskwise
+   ```
 
 To quickly set up TaskWise on Windows, you can use our PowerShell setup script:
 

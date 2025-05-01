@@ -148,67 +148,7 @@ This database-only approach provides:
 - Consistent data access patterns
 - Clear data ownership model
 
-## 4. Development Mode Database Persistence [🚧 To Do]
-
-The current database implementation works well in production but has issues in development mode due to Next.js hot reloading. Each time the code changes or the server restarts, the database connection singleton is reset.
-
-### Solution: External Database Connection File [✅ Done]
-
-To fix this issue, we've implemented a standalone database service:
-
-1. **Created a database service using ES modules**:
-   ```bash
-   mkdir -p db
-   touch db/connection.js
-   ```
-
-   The service is implemented as an ES module (since our project uses `"type": "module"` in package.json) and runs outside the Next.js application lifecycle.
-
-2. **Implemented a Node.js HTTP server for database operations**:
-   ```javascript
-   // db/connection.js
-   import sqlite3 from 'better-sqlite3';
-   import fs from 'fs';
-   import path from 'path';
-   import http from 'http';
-   import { fileURLToPath } from 'url';
-
-   // Get current file path in ESM
-   const __filename = fileURLToPath(import.meta.url);
-   const __dirname = path.dirname(__filename);
-
-   // Initialize database, tables, and HTTP server...
-   ```
-
-3. **Added scripts to package.json for running the service**:
-   ```json
-   "scripts": {
-     "dev": "next dev --turbopack -p 9002",
-     "dev:with-db": "concurrently \"node db/connection.js\" \"next dev --turbopack -p 9002\"",
-     "db:start": "node db/connection.js"
-   }
-   ```
-
-4. **Updated the database client to use the external service in development mode**:
-   In `src/lib/db.ts`, we detect development mode and use fetch API to communicate with the database service instead of direct SQLite connections.
-
-To use the database service in development:
-
-```bash
-# Start both the database service and Next.js
-npm run dev:with-db
-
-# Or start them separately
-npm run db:start
-npm run dev
-```
-
-This approach:
-- Maintains a persistent database connection outside Next.js's module system
-- Works consistently in both development and production environments
-- Allows for proper data persistence across hot reloads
-
-## 5. Server Actions [🚧 To Do - Future]
+## 4. Server Actions [🚧 To Do - Future]
 
 Implement server actions for database operations:
 
@@ -243,7 +183,7 @@ export async function createTask(formData: FormData) {
 }
 ```
 
-## 6. Deployment to Vercel
+## 5A. Deployment to Vercel [🚧 To Do - Future]
 
 1. **Push to GitHub**:
    ```bash
@@ -271,7 +211,44 @@ export async function createTask(formData: FormData) {
    - Check logs for any deployment issues
    - Set up usage alerts for the database and AI API
 
-## 7. User Authentication Implementation [✅ Partially Complete]
+## 5B. Docker Deployment [✅ Done]
+
+For self-hosting, Docker provides the most reliable deployment method:
+
+1. **Docker Configuration**:
+   - A Dockerfile has been created using Node.js 20 (alpine version) with fallback to Node.js 18 for environments with compatibility issues
+   - Docker Compose configuration includes:
+     - Proper environment variable passing
+     - Volume mounting for data persistence
+     - Port exposure (9002 for web UI, 3100 for database API)
+     - Memory allocation settings (2GB recommended)
+
+2. **Key Implementation Decisions**:
+   - Using Node.js 20 by default, with Node.js 18 as fallback for bcrypt compatibility issues in some environments
+   - Including necessary build tools for native modules
+   - Proper handling of cross-origin issues with API URL configuration
+   - Creating a .dockerignore file to optimize build context
+
+3. **Deployment Steps**:
+   ```bash
+   # Configure docker-compose.yml with server's IP
+   # Replace http://localhost:3100 with http://YOUR_SERVER_IP:3100
+   
+   # Start the application
+   docker-compose up -d
+   
+   # Create admin user
+   docker-compose exec taskwise npm run create-admin
+   ```
+
+4. **Troubleshooting**:
+   - Node.js version compatibility issues are documented (use Node.js 18 if Node.js 20 fails)
+   - Build-time vs. runtime environment differences are handled
+   - Memory allocation requirements are documented
+
+See the [Self-Hosting Guide](self-hosting-guide.md) for comprehensive Docker deployment instructions.
+
+## 6. User Authentication Implementation [✅ Partially Complete]
 
 User authentication has been implemented with the following features:
 
@@ -282,70 +259,9 @@ User authentication has been implemented with the following features:
 - User-specific tasks and categories in the SQLite database
 - Password hashing with bcrypt
 - Session management with secure cookies
+- Admin UI for user management
 
-### Still To Do 🚧
-- Admin UI for user management (see new section below)
-- Additional testing with multiple user accounts
-- Documentation updates for user management
-
-## 8. Admin UI for User Management [🚧 To Do]
-
-We need to create an admin interface for managing users:
-
-### Requirements
-
-1. **Admin Dashboard**
-   - Create a protected route at `/admin` that only admin users can access
-   - Display a list of all users with their status, role, and last login time
-   - Provide options to add, edit, or deactivate users
-
-2. **User Creation Form**
-   - Form for admins to create new users with:
-     - Username (required)
-     - Email (required)
-     - Role (admin/user)
-     - Initial password or option to send setup email
-     - Active status toggle
-
-3. **User Edit Form**
-   - Allow editing existing user details
-   - Option to reset user password
-   - Option to change user role or deactivate account
-
-4. **API Endpoints**
-   - Create API endpoints for the admin UI:
-     - `GET /api/admin/users` - List all users
-     - `POST /api/admin/users` - Create a new user
-     - `PUT /api/admin/users/:id` - Update a user
-     - `DELETE /api/admin/users/:id` - Delete or deactivate a user
-
-5. **Authorization Middleware**
-   - Ensure that only users with the admin role can access these endpoints
-   - Add role-based access control to the existing auth middleware
-
-### Implementation Steps
-
-1. **Create Admin Layout and Components**
-   - Create admin layout with sidebar navigation
-   - Create user list component with table/card view
-   - Create user form components for adding/editing
-
-2. **Implement API Routes**
-   - Create the necessary API endpoints under `/api/admin/`
-   - Implement proper validation and error handling
-   - Add admin-only authorization checks
-
-3. **Develop Admin Dashboard Pages**
-   - Create admin dashboard pages using the React components
-   - Implement client-side data fetching and state management
-   - Add proper feedback for successful operations
-
-4. **Testing and Documentation**
-   - Test the admin UI with different user roles
-   - Update documentation with admin features
-   - Create admin guide for user management
-
-## 9. Button and UI Styling [✅ Done]
+## 8. Button and UI Styling [✅ Done]
 
 TaskWise uses consistent button styling across the application to provide a cohesive user experience:
 
@@ -396,7 +312,7 @@ These styles are also applied to selects and other UI controls:
 </Select>
 ```
 
-## 10. Future Enhancements [🚧 To Do]
+## 9. Future Enhancements [🚧 To Do]
 
 1. **User-defined importance**
    - Allow option to manually set importance to influence priority score (1-10 scale)
