@@ -9,7 +9,7 @@ services:
         BUILDKIT_STEP_TIMEOUT: 3600
         # IMPORTANT FOR SELF-HOSTING: 
         # Replace this with your server's actual IP address or hostname
-        NEXT_PUBLIC_API_URL: http://localhost:3100
+        NEXT_PUBLIC_API_URL: http://localhost:3100/api
     ports:
       - "9002:9002"  # Web UI
       - "3100:3100"  # Database API
