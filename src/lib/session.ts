@@ -52,7 +52,7 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
     expires,
     path: '/',
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'lax',
   });
 }
@@ -69,7 +69,7 @@ export async function clearSessionCookie(): Promise<void> {
     expires: new Date(0),
     path: '/',
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'lax',
   });
 }
