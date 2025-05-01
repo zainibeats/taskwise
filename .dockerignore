@@ -1,0 +1,16 @@
+node_modules
+.git
+.github
+.next
+.vscode
+docs
+*.md
+*.log
+data
+.env*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+Dockerfile*
+docker-compose*
+.DS_Store 
