@@ -3,23 +3,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Allow more time for npm ci and build steps
       args:
+        # Use this to extend the build timeout if needed
+        BUILDKIT_STEP_TIMEOUT: 3600
         # IMPORTANT FOR SELF-HOSTING: 
         # Replace this with your server's actual IP address or hostname
-        # Example: http://192.168.1.10:3100 or http://taskwise.example.com/api
-        - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:3100
+        NEXT_PUBLIC_API_URL: http://localhost:3100
     ports:
-      - "3000:3000"  # Web UI
+      - "9002:9002"  # Web UI
       - "3100:3100"  # Database API
     environment:
       - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
       - NODE_ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # Ensure enough memory for build/runtime
     restart: unless-stopped
     volumes:
       - taskwise-data:/app/data  # Persists your database using a named volume
       - taskwise-logs:/app/logs  # Stores logs in a named volume
+      - /app/node_modules  # Anonymous volume to prevent mounting host node_modules
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9002"]
       interval: 30s
       timeout: 10s
       retries: 3
