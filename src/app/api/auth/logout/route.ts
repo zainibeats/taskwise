@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       expires: new Date(0),
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
     });
     
