@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Task } from '../types';
+import { Task } from '../types/task';
 
-// API base URL - should match the database service
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100';
+// Use relative path for better HTTPS compatibility
+const API_BASE_URL = '/api';
 
 export default function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -11,7 +11,7 @@ export default function useTasks() {
 
   // Fetch all tasks
   const fetchTasks = async () => {
-    const apiUrl = `${API_BASE_URL}/api/tasks`;
+    const apiUrl = `${API_BASE_URL}/tasks`;
     console.log('[useTasks] Fetching tasks from:', apiUrl);
     setLoading(true);
     try {
@@ -33,7 +33,7 @@ export default function useTasks() {
 
   // Create a new task
   const createTask = async (taskData: Omit<Task, 'id'>) => {
-    const apiUrl = `${API_BASE_URL}/api/tasks`;
+    const apiUrl = `${API_BASE_URL}/tasks`;
     console.log('[useTasks] Creating task at:', apiUrl, taskData);
     try {
       const response = await fetch(apiUrl, {
@@ -61,7 +61,7 @@ export default function useTasks() {
 
   // Update a task
   const updateTask = async (id: number, updates: Partial<Task>) => {
-    const apiUrl = `${API_BASE_URL}/api/tasks/${id}`;
+    const apiUrl = `${API_BASE_URL}/tasks/${id}`;
     console.log('[useTasks] Updating task at:', apiUrl, updates);
     try {
       const response = await fetch(apiUrl, {
@@ -89,7 +89,7 @@ export default function useTasks() {
 
   // Delete a task
   const deleteTask = async (id: number) => {
-    const apiUrl = `${API_BASE_URL}/api/tasks/${id}`;
+    const apiUrl = `${API_BASE_URL}/tasks/${id}`;
     console.log('[useTasks] Deleting task at:', apiUrl);
     try {
       const response = await fetch(apiUrl, {
@@ -112,7 +112,7 @@ export default function useTasks() {
 
   // Toggle task completion
   const toggleTaskCompletion = async (id: number) => {
-    const apiUrl = `${API_BASE_URL}/api/tasks/${id}`;
+    const apiUrl = `${API_BASE_URL}/tasks/${id}`;
     console.log('[useTasks] Toggling task completion at:', apiUrl);
     try {
       const response = await fetch(apiUrl, {

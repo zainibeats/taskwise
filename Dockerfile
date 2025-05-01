@@ -1,13 +1,11 @@
-FROM node:20-alpine
+# Use Node.js 18 for better compatibility with native modules
+FROM node:18-alpine
 
 # Install dependencies required for better-sqlite3 and bcrypt
 RUN apk add --no-cache python3 make g++ gcc libc-dev sqlite sqlite-dev
 
 # Set working directory
 WORKDIR /app
-
-# Create data directories with proper permissions
-RUN mkdir -p /app/data /app/logs && chmod 777 /app/data /app/logs
 
 # Copy package files first for better caching
 COPY package*.json ./
@@ -20,7 +18,11 @@ COPY . .
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_API_URL=http://localhost:3100
+ENV NEXT_PUBLIC_API_URL=/api
+
+# Ensure data directory exists and has correct permissions
+RUN mkdir -p /app/data /app/logs && \
+    chmod -R 755 /app/data /app/logs
 
 # Build the application
 RUN npm run build
@@ -29,7 +31,7 @@ RUN npm run build
 EXPOSE 9002 3100
 
 # Create volume for data persistence
-VOLUME ["/app/data"]
+VOLUME ["/app/data", "/app/logs"]
 
 # Start both the database service and the Next.js application
 CMD ["npm", "run", "start:with-db"] 

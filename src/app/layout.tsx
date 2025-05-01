@@ -1,8 +1,15 @@
-import type {Metadata} from 'next';
+import { Metadata } from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
+import './category-green.css';
+import './clear-selection.css';
+import { Work_Sans } from 'next/font/google';
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { cn } from '@/lib/utils';
+import { Sidebar } from '@/components/ui/sidebar';
+import { cookies } from 'next/headers';
+import { migrateDatabase } from '@/lib/db-migrations';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -13,6 +20,16 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 });
+
+// Check if we're on the server side and run migrations
+if (typeof window === 'undefined') {
+  try {
+    migrateDatabase();
+    console.log('Database migrations completed during startup');
+  } catch (error) {
+    console.error('Error running database migrations:', error);
+  }
+}
 
 export const metadata: Metadata = {
   title: 'TaskWise',

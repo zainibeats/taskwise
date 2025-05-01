@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // Add API route rewrites to handle relative paths
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/:path*` : 'http://localhost:3100/api/:path*',
+      },
+    ];
+  },
+  
   // Prevent Node.js-specific modules from being bundled on the client side
   webpack: (config, { isServer }) => {
     if (!isServer) {

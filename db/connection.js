@@ -54,12 +54,12 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS user_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      setting_key TEXT NOT NULL,
-      setting_value TEXT,
+      key TEXT NOT NULL,
+      value TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE(user_id, setting_key)
+      UNIQUE(user_id, key)
     )
   `);
 
@@ -145,6 +145,55 @@ function migrateExistingData() {
     }
   } catch (error) {
     // Table doesn't exist yet or other error, skip
+  }
+
+  // Check for old user_settings schema and migrate if needed
+  try {
+    // Check if the table exists and has the old column names
+    const tableInfo = db.prepare("PRAGMA table_info(user_settings)").all();
+    const hasSettingKey = tableInfo.some(col => col.name === 'setting_key');
+    const hasSettingValue = tableInfo.some(col => col.name === 'setting_value');
+    
+    if (hasSettingKey || hasSettingValue) {
+      console.log('Migrating user_settings table to new schema (key/value)');
+      
+      // Create new table with correct schema
+      db.exec(`
+        CREATE TABLE user_settings_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          key TEXT NOT NULL,
+          value TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE(user_id, key)
+        )
+      `);
+      
+      // Try to copy data from old table if possible
+      if (hasSettingKey && hasSettingValue) {
+        db.exec(`
+          INSERT OR IGNORE INTO user_settings_new (id, user_id, key, value, created_at, updated_at)
+          SELECT id, user_id, setting_key, setting_value, created_at, updated_at FROM user_settings
+        `);
+      } else {
+        // Just copy the user_id to maintain relationships
+        db.exec(`
+          INSERT OR IGNORE INTO user_settings_new (id, user_id)
+          SELECT id, user_id FROM user_settings
+        `);
+      }
+      
+      // Drop old table and rename new one
+      db.exec("DROP TABLE user_settings");
+      db.exec("ALTER TABLE user_settings_new RENAME TO user_settings");
+      
+      console.log('Migration of user_settings completed');
+    }
+  } catch (error) {
+    console.error('Error checking/migrating user_settings schema:', error);
+    // Table might not exist yet, which is fine
   }
 }
 
@@ -822,12 +871,12 @@ const server = http.createServer(async (req, res) => {
       
       // Get all settings for the user
       if (path === '/api/user-settings' && req.method === 'GET') {
-        const settingsRows = db.prepare('SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?').all(userId);
+        const settingsRows = db.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').all(userId);
         
         // Convert to object format
         const settings = {};
         settingsRows.forEach(row => {
-          settings[row.setting_key] = row.setting_value;
+          settings[row.key] = row.value;
         });
         
         res.setHeader('Content-Type', 'application/json');
@@ -841,12 +890,12 @@ const server = http.createServer(async (req, res) => {
       const settingKey = settingKeyMatch ? decodeURIComponent(settingKeyMatch[1]) : null;
       
       if (settingKey && req.method === 'GET') {
-        const setting = db.prepare('SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?').get(userId, settingKey);
+        const setting = db.prepare('SELECT value FROM user_settings WHERE user_id = ? AND key = ?').get(userId, settingKey);
         
         if (setting) {
           res.setHeader('Content-Type', 'application/json');
           res.statusCode = 200;
-          res.end(JSON.stringify({ value: setting.setting_value }));
+          res.end(JSON.stringify({ value: setting.value }));
         } else {
           res.statusCode = 404;
           res.end(JSON.stringify({ error: 'Setting not found' }));
@@ -866,10 +915,10 @@ const server = http.createServer(async (req, res) => {
         
         // Upsert - if exists update, otherwise insert
         const stmt = db.prepare(`
-          INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at)
+          INSERT INTO user_settings (user_id, key, value, updated_at)
           VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-          ON CONFLICT(user_id, setting_key) 
-          DO UPDATE SET setting_value = excluded.setting_value, updated_at = CURRENT_TIMESTAMP
+          ON CONFLICT(user_id, key) 
+          DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
         `);
         
         stmt.run(userId, key, value);
@@ -882,7 +931,7 @@ const server = http.createServer(async (req, res) => {
       
       // Delete a setting
       if (settingKey && req.method === 'DELETE') {
-        db.prepare('DELETE FROM user_settings WHERE user_id = ? AND setting_key = ?').run(userId, settingKey);
+        db.prepare('DELETE FROM user_settings WHERE user_id = ? AND key = ?').run(userId, settingKey);
         
         res.setHeader('Content-Type', 'application/json');
         res.statusCode = 200;

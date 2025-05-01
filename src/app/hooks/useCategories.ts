@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Category } from '../types';
 
-// API base URL - should match the database service
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100';
+// Use relative path for better HTTPS compatibility
+const API_BASE_URL = '/api';
 
 export default function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -11,7 +11,7 @@ export default function useCategories() {
 
   // Fetch all categories
   const fetchCategories = async () => {
-    const apiUrl = `${API_BASE_URL}/api/categories`;
+    const apiUrl = `${API_BASE_URL}/categories`;
     console.log('[useCategories] Fetching categories from:', apiUrl);
     setLoading(true);
     try {
@@ -33,7 +33,7 @@ export default function useCategories() {
 
   // Create or update a category
   const saveCategory = async (category: Category) => {
-    const apiUrl = `${API_BASE_URL}/api/categories`;
+    const apiUrl = `${API_BASE_URL}/categories`;
     console.log('[useCategories] Saving category at:', apiUrl, category);
     try {
       const response = await fetch(apiUrl, {
@@ -71,7 +71,7 @@ export default function useCategories() {
 
   // Delete a category
   const deleteCategory = async (name: string) => {
-    const apiUrl = `${API_BASE_URL}/api/categories?name=${encodeURIComponent(name)}`;
+    const apiUrl = `${API_BASE_URL}/categories?name=${encodeURIComponent(name)}`;
     console.log('[useCategories] Deleting category at:', apiUrl);
     try {
       const response = await fetch(apiUrl, {

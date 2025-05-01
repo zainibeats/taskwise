@@ -1,13 +1,12 @@
 import { Task } from "@/app/types/task";
 import { Category } from "@/app/types";
 
-// Base URL for API - use environment variable in production
-// In browser, use the current origin + :3100 if localhost
+// Base URL for API 
+// In browser, use relative paths for better HTTPS compatibility
+// In Node.js environment, use environment variable or default
 const API_BASE_URL = typeof window !== 'undefined' 
-  ? (window.location.hostname === 'localhost' 
-    ? 'http://localhost:3100' 
-    : window.location.origin.replace(/:\d+$/, ':3100'))
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
+  ? '/api' // Use relative path in browser for better HTTPS compatibility
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100/api');
 
 /**
  * Task API client functions
@@ -19,9 +18,10 @@ export const TaskApi = {
    */
   async getAllTasks(): Promise<Task[]> {
     console.log("[API] Starting getAllTasks...");
-    console.log("[API] Using API URL:", `${API_BASE_URL}/api/tasks`);
+    const apiUrl = typeof window !== 'undefined' ? `${API_BASE_URL}/tasks` : `${API_BASE_URL}/tasks`;
+    console.log("[API] Using API URL:", apiUrl);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+      const response = await fetch(apiUrl, {
         credentials: 'include', // Include cookies for authentication
       });
       console.log("[API] Response status:", response.status);
@@ -77,7 +77,7 @@ export const TaskApi = {
         })) || []
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+      const response = await fetch(`${API_BASE_URL}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export const TaskApi = {
         }));
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${parseInt(taskId, 10)}`, {
+      const response = await fetch(`${API_BASE_URL}/tasks/${parseInt(taskId, 10)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ export const TaskApi = {
    */
   async deleteTask(taskId: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${parseInt(taskId, 10)}`, {
+      const response = await fetch(`${API_BASE_URL}/tasks/${parseInt(taskId, 10)}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for authentication
       });
@@ -202,7 +202,7 @@ export const TaskApi = {
    */
   async toggleTaskCompletion(taskId: string): Promise<Task | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${parseInt(taskId, 10)}`, {
+      const response = await fetch(`${API_BASE_URL}/tasks/${parseInt(taskId, 10)}`, {
         method: 'PATCH',
         credentials: 'include', // Include cookies for authentication
       });
@@ -244,9 +244,9 @@ export const CategoryApi = {
    */
   async getAllCategories(): Promise<Record<string, string>> {
     console.log("[API] Starting getAllCategories...");
-    console.log("[API] Using API URL:", `${API_BASE_URL}/api/categories`);
+    console.log("[API] Using API URL:", `${API_BASE_URL}/categories`);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/categories`, {
+      const response = await fetch(`${API_BASE_URL}/categories`, {
         credentials: 'include', // Include cookies for authentication
       });
       console.log("[API] Categories response status:", response.status);
@@ -280,9 +280,9 @@ export const CategoryApi = {
    */
   async saveCategory(name: string, icon: string): Promise<boolean> {
     console.log("[API] Saving category:", name, icon);
-    console.log("[API] Using API URL:", `${API_BASE_URL}/api/categories`);
+    console.log("[API] Using API URL:", `${API_BASE_URL}/categories`);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/categories`, {
+      const response = await fetch(`${API_BASE_URL}/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -312,7 +312,7 @@ export const CategoryApi = {
    */
   async deleteCategory(name: string): Promise<boolean> {
     console.log("[API] Deleting category:", name);
-    const url = `${API_BASE_URL}/api/categories?name=${encodeURIComponent(name)}`;
+    const url = `${API_BASE_URL}/categories?name=${encodeURIComponent(name)}`;
     console.log("[API] Using API URL:", url);
     try {
       console.log("[API] Making DELETE request to:", url);
@@ -355,7 +355,7 @@ export const UserSettingsApi = {
   async getAllSettings(): Promise<Record<string, string>> {
     try {
       console.log("Fetching all user settings");
-      const response = await fetch(`${API_BASE_URL}/api/user-settings`, {
+      const response = await fetch(`${API_BASE_URL}/user-settings`, {
         credentials: 'include', // Include cookies for authentication
       });
       
@@ -384,7 +384,7 @@ export const UserSettingsApi = {
   async getSetting(key: string): Promise<string | null> {
     try {
       console.log(`Fetching setting: ${key}`);
-      const response = await fetch(`${API_BASE_URL}/api/user-settings/${encodeURIComponent(key)}`, {
+      const response = await fetch(`${API_BASE_URL}/user-settings/${encodeURIComponent(key)}`, {
         credentials: 'include', // Include cookies for authentication
       });
       
@@ -418,7 +418,7 @@ export const UserSettingsApi = {
   async saveSetting(key: string, value: string): Promise<boolean> {
     try {
       console.log(`Saving setting: ${key}, value length: ${value?.length || 0}`);
-      const response = await fetch(`${API_BASE_URL}/api/user-settings`, {
+      const response = await fetch(`${API_BASE_URL}/user-settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -454,7 +454,7 @@ export const UserSettingsApi = {
   async deleteSetting(key: string): Promise<boolean> {
     try {
       console.log(`Deleting setting: ${key}`);
-      const response = await fetch(`${API_BASE_URL}/api/user-settings/${encodeURIComponent(key)}`, {
+      const response = await fetch(`${API_BASE_URL}/user-settings/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for authentication
       });
