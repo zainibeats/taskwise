@@ -124,8 +124,6 @@ Once you have an admin account:
    - Deactivate users
    - Reset passwords
 
-For detailed user management instructions, see [User Management Guide](user-management-guide.md).
-
 ### User Data Separation
 
 Each user has their own:
@@ -235,7 +233,6 @@ For a production deployment, you may want to use a domain name instead of an IP 
 3. **Optional: Set up HTTPS**
    - For secure access, consider setting up HTTPS with Let's Encrypt
    - If using HTTPS, update URLs to use `https://` instead of `http://`
-   - See [SSL Setup Guide](ssl-setup-guide.md) for detailed instructions
 
 ## Data Backup
 
