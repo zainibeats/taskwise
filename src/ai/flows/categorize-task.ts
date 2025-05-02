@@ -32,7 +32,13 @@ export async function categorizeTask(input: CategorizeTaskInput): Promise<Catego
   try {
     // Log that we're trying to categorize with a specific user ID
     console.log(`Attempting to categorize task with user ID: ${input.userId || 'none'}`);
-
+    
+    // Check if taskDescription is provided
+    if (!input.taskDescription || input.taskDescription.trim() === '') {
+      console.warn('Task description is empty, cannot categorize');
+      return { category: 'Other' };
+    }
+    
     // Get the current AI instance with the latest API key
     const ai = await getServerAI(input.userId);
     
@@ -84,6 +90,19 @@ Category: `,
     return await categorizeTaskFlow({ ...input, categoriesString });
   } catch (error) {
     console.error("Error in categorizeTask:", error);
+    
+    // Provide more specific error messages based on error type
+    if (error instanceof Error) {
+      if (error.message.includes("API_KEY_INVALID")) {
+        console.error("API key is invalid. Please check your API key in settings.");
+      } else if (error.message.includes("No valid API key available")) {
+        console.error("No valid API key available. Please add one in settings.");
+      } else if (error.message.includes("PERMISSION_DENIED")) {
+        console.error("API key doesn't have permission to use this service.");
+      } else if (error.message.includes("QUOTA_EXCEEDED")) {
+        console.error("API quota limit exceeded.");
+      }
+    }
     
     // Use keyword matching as a fallback
     const defaultCategories = ["Health", "Finance", "Work", "Personal", "Errands", "Other"];

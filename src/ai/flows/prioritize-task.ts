@@ -31,14 +31,14 @@ export async function prioritizeTask(input: PrioritizeTaskInput): Promise<Priori
     // Log that we're trying to prioritize with a specific user ID
     console.log(`Attempting to prioritize task with user ID: ${input.userId || 'none'}`);
     
-    // Get the current AI instance with the latest API key
-    let ai;
-    try {
-      ai = await getServerAI(input.userId);
-    } catch (aiError) {
-      console.error("Error initializing AI with user API key:", aiError);
-      throw new Error(`AI initialization failed: ${aiError instanceof Error ? aiError.message : String(aiError)}`);
+    // Check if task information is provided
+    if (!input.task || input.task.trim() === '') {
+      console.warn('Task title is empty, cannot prioritize properly');
+      return { priorityScore: 50 }; // Default to medium priority
     }
+    
+    // Get the current AI instance with the latest API key
+    const ai = await getServerAI(input.userId);
     
     // Define the flow and prompt inside the function to use the current AI instance
     const prioritizeTaskPrompt = ai.definePrompt({
@@ -103,6 +103,19 @@ Priority score: `,
     return result;
   } catch (error) {
     console.error("Error in prioritizeTask:", error);
+    
+    // Provide more specific error messages based on error type
+    if (error instanceof Error) {
+      if (error.message.includes("API_KEY_INVALID")) {
+        console.error("API key is invalid. Please check your API key in settings.");
+      } else if (error.message.includes("No valid API key available")) {
+        console.error("No valid API key available. Please add one in settings.");
+      } else if (error.message.includes("PERMISSION_DENIED")) {
+        console.error("API key doesn't have permission to use this service.");
+      } else if (error.message.includes("QUOTA_EXCEEDED")) {
+        console.error("API quota limit exceeded.");
+      }
+    }
     
     // Calculate category multiplier for fallback calculation
     const getCategoryMultiplier = (category: string): number => {

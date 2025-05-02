@@ -32,9 +32,9 @@ const getApiKeyFromDb = async (userId?: number): Promise<string> => {
       `).get();
       
       if (tableExists) {
-        // Check if the 'setting_value' column exists
+        // Check if the 'value' column exists
         const tableInfo = db.prepare(`PRAGMA table_info(user_settings)`).all() as any[];
-        const hasValueColumn = tableInfo.some(column => column.name === 'setting_value');
+        const hasValueColumn = tableInfo.some(column => column.name === 'value');
         
         if (hasValueColumn) {
           console.log(`Querying user_settings table for googleAiApiKey for user ${userId}`);
@@ -42,7 +42,7 @@ const getApiKeyFromDb = async (userId?: number): Promise<string> => {
           // Log all settings for this user to help debug
           try {
             const allSettings = db.prepare(
-              'SELECT setting_key as key, setting_value as value FROM user_settings WHERE user_id = ?'
+              'SELECT key, value FROM user_settings WHERE user_id = ?'
             ).all(userId) as any[];
             console.log(`Found ${allSettings.length} settings for user ${userId}:`, 
               allSettings.map(s => s.key).join(', '));
@@ -51,7 +51,7 @@ const getApiKeyFromDb = async (userId?: number): Promise<string> => {
           }
           
           const setting = db.prepare(
-            'SELECT setting_value as value FROM user_settings WHERE user_id = ? AND setting_key = ?'
+            'SELECT value FROM user_settings WHERE user_id = ? AND key = ?'
           ).get(userId, 'googleAiApiKey') as SettingRow | undefined;
           
           if (setting && setting.value) {
@@ -96,15 +96,46 @@ const getApiKeyFromDb = async (userId?: number): Promise<string> => {
   return apiKey;
 };
 
+// Function to fix API key format issues
+const fixApiKeyFormat = (apiKey: string): string => {
+  // If API key doesn't start with 'AI', but contains it, try to extract the correct part
+  if (!apiKey.startsWith('AI') && apiKey.includes('AI')) {
+    const match = apiKey.match(/AI[a-zA-Z0-9_-]+/);
+    if (match && match[0]) {
+      console.log('Fixed API key format by extracting the correct part');
+      return match[0];
+    }
+  }
+  
+  // Remove any quotes that might be wrapping the key
+  if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || 
+      (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+    console.log('Removed quotes from API key');
+    return apiKey.substring(1, apiKey.length - 1);
+  }
+  
+  // Remove any whitespace
+  const trimmedKey = apiKey.trim();
+  if (trimmedKey !== apiKey) {
+    console.log('Removed whitespace from API key');
+    return trimmedKey;
+  }
+  
+  return apiKey;
+};
+
 // Create the AI instance with dynamic API key
 export const createServerAiInstance = async (userId?: number) => {
-  const apiKey = await getApiKeyFromDb(userId);
+  let apiKey = await getApiKeyFromDb(userId);
   
   // Validate the API key before creating the instance
   if (!apiKey || apiKey.trim() === '') {
     console.error('No valid API key available. AI features will not work.');
     throw new Error('No valid API key available for AI operations.');
   }
+  
+  // Apply fixes to API key format
+  apiKey = fixApiKeyFormat(apiKey);
   
   // Additional validation for Google AI API keys
   // Google AI API keys typically follow specific patterns
