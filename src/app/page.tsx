@@ -173,21 +173,50 @@ function TaskWiseApp() {
           setHistoryIndex(0);
           toast({ title: "Tasks loaded from database" });
         } else {
-          console.log("[DEBUG] No tasks from API, using default tasks");
-          // We no longer use localStorage as fallback
-          console.log("[DEBUG] Using default tasks");
-          setHistory([defaultTasks]);
-          setHistoryIndex(0);
+          // Check if this is the user's first login ever by checking a setting
+          try {
+            const hasSeenDefaultTask = await fetch('/api/user-settings/has-seen-default-task', {
+              credentials: 'include',
+            });
+            
+            const { hasSeenDefault } = await hasSeenDefaultTask.json();
+            
+            if (!hasSeenDefault) {
+              console.log("[DEBUG] First login detected, using default tasks");
+              // Set the flag to indicate user has seen default tasks
+              await fetch('/api/user-settings/has-seen-default-task', {
+                method: 'POST',
+                credentials: 'include',
+              });
+              
+              // Use default tasks for first-time users only
+              setHistory([defaultTasks]);
+              setHistoryIndex(0);
+              
+              // Also save these default tasks to the database
+              await saveTasks(defaultTasks);
+            } else {
+              console.log("[DEBUG] No tasks found, but user has logged in before. Using empty task list.");
+              // Return empty task list for returning users
+              setHistory([[]]);
+              setHistoryIndex(0);
+            }
+          } catch (settingsError) {
+            console.error("[DEBUG] Error checking user settings:", settingsError);
+            // Assume first time if we can't check settings
+            setHistory([defaultTasks]);
+            setHistoryIndex(0);
+            await saveTasks(defaultTasks);
+          }
         }
       } catch (error) {
         console.error("[DEBUG] Error loading tasks from API:", error);
-        // Use default tasks as fallback
-        console.log("[DEBUG] Using default tasks due to API error");
-        setHistory([defaultTasks]);
+        // Use empty task list as fallback
+        setHistory([[]]);
         setHistoryIndex(0);
         toast({ 
           title: "Error loading tasks", 
-          description: "Using default tasks",
+          description: "Could not connect to the database",
           variant: "destructive"
         });
       } finally {

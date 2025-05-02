@@ -1,7 +1,8 @@
-import { getDbConnection } from '@/lib/db';
+import getDbConnection from '@/lib/db';
 import { cookies } from 'next/headers';
 import { type User } from './user-config';
 import { Database } from 'better-sqlite3';
+import crypto from 'crypto';
 
 // Session type
 interface Session {
