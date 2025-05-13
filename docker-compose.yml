@@ -3,36 +3,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Allow more time for npm ci and build steps
       args:
-        # Use this to extend the build timeout if needed
-        BUILDKIT_STEP_TIMEOUT: 3600
-        # Use a relative path instead of absolute
         NEXT_PUBLIC_API_URL: /api
     ports:
       - "9002:9002"  # Web UI
       - "3100:3100"  # Database API
     environment:
-      # Removed GOOGLE_AI_API_KEY to prevent fallback
       - NODE_ENV=production
-    deploy:
-      resources:
-        limits:
-          memory: 2G  # Ensure enough memory for build/runtime
     restart: unless-stopped
     container_name: taskwise
     volumes:
-      - taskwise-data:/app/data  # Persists your database using a named volume
-      - taskwise-logs:/app/logs  # Stores logs in a named volume
-      - /app/node_modules  # Anonymous volume to prevent mounting host node_modules
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9002"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      - taskwise-data:/app/data
+      - taskwise-logs:/app/logs
+      - /app/node_modules
 
-# Use named volumes for better portability across systems
 volumes:
   taskwise-data:
     driver: local
