@@ -1,5 +1,5 @@
 # Use Node.js 18 for better compatibility with native modules
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install dependencies required for better-sqlite3 and bcrypt
 RUN apk add --no-cache python3 make g++ gcc libc-dev sqlite sqlite-dev
