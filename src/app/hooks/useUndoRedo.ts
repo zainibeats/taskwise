@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from "react";
+import { conditionalToast } from "@/lib/toast-utils";
 
 export interface UseUndoRedoOptions<T> {
   history: T[][];
@@ -33,14 +34,14 @@ export function useUndoRedo<T>({
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
-      toast?.({ title: "Undo performed" });
+      toast && conditionalToast({ title: "Undo performed" }, "undo");
     }
   }, [historyIndex, setHistoryIndex, toast]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       setHistoryIndex(historyIndex + 1);
-      toast?.({ title: "Redo performed" });
+      toast && conditionalToast({ title: "Redo performed" }, "redo");
     }
   }, [historyIndex, history.length, setHistoryIndex, toast]);
 

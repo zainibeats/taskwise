@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { conditionalToast } from "@/lib/toast-utils"
 import { UserSettingsApi } from "@/lib/api-client"
 
 /**
@@ -94,10 +95,10 @@ export function SettingsMenu() {
     if (success) {
       setIsDialogOpen(false);
       console.log("API key saved successfully to database");
-      toast({
+      conditionalToast({
         title: "API Key Saved",
         description: "Your Google AI API key has been saved successfully to the database.",
-      });
+      }, "settings_api_key_saved");
       
       // Confirm the key was saved by retrieving it
       setTimeout(async () => {
@@ -131,10 +132,10 @@ export function SettingsMenu() {
     if (success) {
       setApiKey("");
       setIsDialogOpen(false);
-      toast({
+      conditionalToast({
         title: "API Key Removed",
         description: "Your Google AI API key has been removed from the database.",
-      });
+      }, "settings_api_key_removed");
     } else {
       toast({
         title: "Error Removing API Key",
@@ -158,10 +159,10 @@ export function SettingsMenu() {
       });
       
       if (response.ok) {
-        toast({
+        conditionalToast({
           title: "Logged Out",
           description: "You have been successfully logged out.",
-        });
+        }, "logout");
         // Redirect to login page
         router.push('/login');
       } else {

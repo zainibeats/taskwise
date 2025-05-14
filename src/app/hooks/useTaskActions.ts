@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import type { Task, Subtask } from "../types/task";
 import { TaskApi } from "@/lib/api-client";
+import { conditionalToast } from "@/lib/toast-utils";
 
 interface UseTaskActionsProps {
   tasks: Task[];
@@ -51,7 +52,7 @@ export function useTaskActions({
           console.log(`[DEBUG] Task completion toggled in database:`, updatedTask);
         }
       }
-      toast({ title: completed ? "Task marked complete" : "Task marked incomplete" });
+      conditionalToast({ title: completed ? "Task marked complete" : "Task marked incomplete" }, "task_completion");
     } catch (error) {
       console.error(`[DEBUG] Error toggling task completion in database:`, error);
       toast({ 
@@ -120,7 +121,7 @@ export function useTaskActions({
           console.log(`[DEBUG] Task updated in database:`, result);
         }
       }
-      toast({ title: "Task updated" });
+      conditionalToast({ title: "Task updated" }, "update_task");
     } catch (error) {
       console.error(`[DEBUG] Error updating task in database:`, error);
       toast({ 
@@ -147,7 +148,7 @@ export function useTaskActions({
           console.log(`[DEBUG] Task deleted from database: ${success}`);
         }
       }
-      toast({ title: "Task deleted" });
+      conditionalToast({ title: "Task deleted" }, "delete_task");
     } catch (error) {
       console.error(`[DEBUG] Error deleting task from database:`, error);
       toast({ 

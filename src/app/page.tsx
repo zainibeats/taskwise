@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { conditionalToast } from "@/lib/toast-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import Image from 'next/image'
@@ -171,7 +172,7 @@ function TaskWiseApp() {
           // Use the API tasks
           setHistory([apiTasks]);
           setHistoryIndex(0);
-          toast({ title: "Tasks loaded from database" });
+          conditionalToast({ title: "Tasks loaded from database" }, "load_tasks");
         } else {
           console.log("[DEBUG] No tasks from API, using default tasks");
           // We no longer use localStorage as fallback
@@ -297,10 +298,10 @@ function TaskWiseApp() {
           console.log('[DEBUG] Merged categories:', mergedCategories);
           
           setLoadedCategoryIcons(mergedCategories);
-          toast({ 
+          conditionalToast({ 
             title: "Categories loaded from database", 
             description: `Loaded ${Object.keys(apiCategories).length} categories`
-          });
+          }, "load_categories");
         } else {
           console.log('[DEBUG] No categories from API, using default built-in categories');
           setLoadedCategoryIcons(categoryIconsToLoad);
@@ -352,7 +353,7 @@ function TaskWiseApp() {
         setCategoryIconsState(updatedIcons);
         setSelectedCategory(category);
         
-        toast({ title: "Custom category created", description: `${emoji} ${category}` });
+        conditionalToast({ title: "Custom category created", description: `${emoji} ${category}` }, "create_category");
       } else {
         console.error(`[DEBUG] Failed to save category "${category}" to database`);
         toast({ 
@@ -401,7 +402,7 @@ function TaskWiseApp() {
           setSelectedCategory(undefined);
         }
         
-        toast({ title: "Custom category deleted", description: category });
+        conditionalToast({ title: "Custom category deleted", description: category }, "delete_category");
       } else {
         console.error(`[DEBUG] Failed to delete category "${category}" from database`);
         toast({ 
@@ -571,10 +572,7 @@ function TaskWiseApp() {
       setSelectedDate(new Date());
       setSelectedCategory(undefined);
 
-      toast({
-        title: "Task added successfully!",
-        description: `"${newTask.title}" has been added to your list.`,
-      });
+      conditionalToast({ title: "Task added successfully!", description: `"${newTask.title}" has been added to your list.` }, "create_task");
     } catch (err) {
       console.error("Error adding task:", err);
       toast({
