@@ -1,7 +1,8 @@
 import { useCallback } from "react";
 import type { Task, Subtask } from "../types/task";
-import { TaskApi } from "@/lib/api-client";
+import { TaskApi, UserSettingsApi } from "@/lib/api-client";
 import { conditionalToast } from "@/lib/toast-utils";
+import { debugLog, debugError } from "@/lib/debug";
 
 interface UseTaskActionsProps {
   tasks: Task[];
@@ -137,20 +138,32 @@ export function useTaskActions({
     const updatedTasks = tasks.filter((task) => task.id !== id);
     pushHistory(updatedTasks);
     
+    // Check if this is the default task being deleted
+    if (id === "default-1") {
+      debugLog("Default task being deleted, saving this preference");
+      try {
+        // Mark that the default task has been deleted so it won't appear again after logout
+        await UserSettingsApi.saveSetting('defaultTaskDeleted', 'true');
+        debugLog("Marked default task as deleted in user settings");
+      } catch (settingError) {
+        debugError("Error saving default task deletion setting:", settingError);
+      }
+    }
+    
     // Then delete from database
     try {
       if (id.startsWith('local-') || id.startsWith('default-')) {
-        console.log(`[DEBUG] Local-only task ${id}, not deleting from database`);
+        debugLog(`Local-only task ${id}, not deleting from database`);
       } else {
         const numericId = parseInt(id, 10);
         if (!isNaN(numericId)) {
           const success = await TaskApi.deleteTask(id);
-          console.log(`[DEBUG] Task deleted from database: ${success}`);
+          debugLog(`Task deleted from database: ${success}`);
         }
       }
       conditionalToast({ title: "Task deleted" }, "delete_task");
     } catch (error) {
-      console.error(`[DEBUG] Error deleting task from database:`, error);
+      debugError(`Error deleting task from database:`, error);
       toast({ 
         title: "Task deleted locally",
         description: "Could not delete from database" 

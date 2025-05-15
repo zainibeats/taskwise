@@ -3,7 +3,7 @@
 import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getStoredTasks, saveTasks } from "@/lib/storage";
-import { TaskApi, CategoryApi } from "@/lib/api-client"; // Import API client
+import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client"; // Import API client
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
 import { useCategoryActions } from "./hooks/useCategoryActions";
@@ -163,34 +163,70 @@ function TaskWiseApp() {
       // Only try to load tasks if authenticated
       if (!isAuthenticated) return;
       
+      // Initialize default task deletion status flag outside try block for proper scope
+      let defaultTaskDeleted = false;
+      
       try {
+        // First, always check if the default task was deleted
+        try {
+          const defaultTaskDeletedSetting = await UserSettingsApi.getSetting('defaultTaskDeleted');
+          defaultTaskDeleted = defaultTaskDeletedSetting === 'true';
+          debugLog("Default task deletion status:", defaultTaskDeleted ? "Deleted" : "Not deleted");
+        } catch (settingsError) {
+          debugError("Error checking default task deletion setting:", settingsError);
+          // If we can't check the setting, assume the default task wasn't deleted
+        }
+        
+        // Then fetch tasks from API
         debugLog("Fetching tasks from API...");
         const apiTasks = await TaskApi.getAllTasks();
         debugLog("API tasks received:", apiTasks);
         
         if (apiTasks && apiTasks.length > 0) {
-          // Use the API tasks
+          // If there are API tasks, use them regardless of default task status
           setHistory([apiTasks]);
           setHistoryIndex(0);
           conditionalToast({ title: "Tasks loaded from database" }, "load_tasks");
         } else {
-          debugLog("No tasks from API, using default tasks");
-          // We no longer use localStorage as fallback
-          debugLog("Using default tasks");
-          setHistory([defaultTasks]);
-          setHistoryIndex(0);
+          // No tasks from API, determine what to do
+          debugLog("No tasks from API, checking default task deletion status");
+          
+          if (defaultTaskDeleted) {
+            // If default task was deleted, start with empty task list
+            debugLog("Default task was previously deleted, starting with empty list");
+            setHistory([[]]);
+            setHistoryIndex(0);
+          } else {
+            // If default task wasn't deleted, use default tasks
+            debugLog("Using default tasks");
+            setHistory([defaultTasks]);
+            setHistoryIndex(0);
+          }
         }
       } catch (error) {
         debugError("Error loading tasks from API:", error);
-        // Use default tasks as fallback
-        debugLog("Using default tasks due to API error");
-        setHistory([defaultTasks]);
-        setHistoryIndex(0);
-        toast({ 
-          title: "Error loading tasks", 
-          description: "Using default tasks",
-          variant: "destructive"
-        });
+        
+        // Even in error case, respect the default task deletion preference
+        if (defaultTaskDeleted) {
+          debugLog("API error, but default task was previously deleted, starting with empty list");
+          setHistory([[]]);
+          setHistoryIndex(0);
+          toast({ 
+            title: "Error loading tasks", 
+            description: "Could not load any tasks",
+            variant: "destructive"
+          });
+        } else {
+          // Use default tasks as fallback only if they weren't deleted
+          debugLog("Using default tasks due to API error");
+          setHistory([defaultTasks]);
+          setHistoryIndex(0);
+          toast({ 
+            title: "Error loading tasks", 
+            description: "Using default tasks",
+            variant: "destructive"
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -1017,3 +1053,5 @@ export default function Home() {
     </Suspense>
   );
 }
+
+// The TaskWiseApp component is already defined above
