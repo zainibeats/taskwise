@@ -18,6 +18,9 @@ export async function OPTIONS() {
 // GET /api/categories - Get all categories
 export async function GET(request: NextRequest) {
   try {
+    // Extract cookies from request
+    const cookie = request.headers.get('cookie') || '';
+    
     // Get current user
     const session = await getCurrentSession();
     if (!session || !session.user) {
@@ -27,8 +30,8 @@ export async function GET(request: NextRequest) {
     }
     
     const userId = session.user.id;
-    // Get categories for this user (including system defaults)
-    const categories = await categoryService.getAllCategories(userId);
+    // Get categories for this user (including system defaults) and pass cookies
+    const categories = await categoryService.getAllCategories(userId, { cookie });
     return setCorsHeaders(NextResponse.json(categories));
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -44,6 +47,9 @@ export async function GET(request: NextRequest) {
 // POST /api/categories - Create or update a category
 export async function POST(request: NextRequest) {
   try {
+    // Extract cookies from request
+    const cookie = request.headers.get('cookie') || '';
+    
     // Get current user
     const session = await getCurrentSession();
     if (!session || !session.user) {
@@ -68,7 +74,8 @@ export async function POST(request: NextRequest) {
       user_id: userId
     };
     
-    const category = await categoryService.saveCategory(categoryWithUser);
+    // Pass the cookies to the service
+    const category = await categoryService.saveCategory(categoryWithUser, { cookie });
     return setCorsHeaders(NextResponse.json(category, { status: 201 }));
   } catch (error) {
     console.error('Error saving category:', error);

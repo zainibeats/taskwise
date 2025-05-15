@@ -1,5 +1,6 @@
 import { toast as showToast } from "@/hooks/use-toast";
 import { type ToastActionElement } from "@/components/ui/toast";
+import { debugLog } from "./debug";
 
 // Extended toast props interface to include description
 interface ToastOptions {
@@ -41,10 +42,8 @@ export function conditionalToast(props: ToastOptions, operation?: string) {
     return showToast(props);
   }
   
-  // Log silenced notifications in development for debugging
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[TOAST] Silenced notification for operation: ${operation}`, props);
-  }
+  // Log silenced notifications for debugging
+  debugLog(`Silenced notification for operation: ${operation}`, props);
   
   // Return undefined for silenced notifications
   return undefined;

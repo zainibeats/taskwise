@@ -223,11 +223,14 @@ if (typeof process !== 'undefined') {
 // Export the database service API for development mode
 export const dbService = {
   // Tasks
-  getAllTasks: () => fetchFromService('/api/tasks'),
+  getAllTasks: (headers?: { cookie?: string }) => fetchFromService('/api/tasks', {
+    headers: headers || {}
+  }),
   getTaskById: (id: number) => fetchFromService(`/api/tasks/${id}`),
-  createTask: (task: any, userId?: number) => fetchFromService('/api/tasks', {
+  createTask: (task: any, userId?: number, headers?: { cookie?: string }) => fetchFromService('/api/tasks', {
     method: 'POST',
     body: JSON.stringify({ ...task, userId }),
+    headers: headers || {}
   }),
   updateTask: (id: number, updates: any) => fetchFromService(`/api/tasks/${id}`, {
     method: 'PUT',
@@ -241,13 +244,16 @@ export const dbService = {
   }),
   
   // Categories
-  getAllCategories: (userId?: number) => {
+  getAllCategories: (userId?: number, headers?: { cookie?: string }) => {
     const endpoint = userId ? `/api/categories?userId=${userId}` : '/api/categories';
-    return fetchFromService(endpoint);
+    return fetchFromService(endpoint, {
+      headers: headers || {}
+    });
   },
-  saveCategory: (category: any) => fetchFromService('/api/categories', {
+  saveCategory: (category: any, headers?: { cookie?: string }) => fetchFromService('/api/categories', {
     method: 'POST',
     body: JSON.stringify(category),
+    headers: headers || {}
   }),
   deleteCategory: (name: string, userId?: number) => {
     const endpoint = userId 

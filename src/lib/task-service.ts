@@ -13,9 +13,10 @@ const getDb = () => getDbConnection();
 // Task operations
 export const taskService = {
   // Get all tasks
-  getAllTasks: async (): Promise<Task[]> => {
+  getAllTasks: async (userId?: number, headers?: { cookie?: string }): Promise<Task[]> => {
     if (isDevelopment) {
-      return dbService.getAllTasks();
+      // Pass the headers to the database service
+      return dbService.getAllTasks(headers);
     }
     
     const db = getDb();
@@ -44,9 +45,9 @@ export const taskService = {
   },
 
   // Create a new task
-  createTask: async (task: Omit<Task, 'id'>, userId?: number): Promise<Task> => {
+  createTask: async (task: Omit<Task, 'id'>, userId?: number, headers?: { cookie?: string }): Promise<Task> => {
     if (isDevelopment) {
-      return dbService.createTask(task, userId);
+      return dbService.createTask(task, userId, headers);
     }
     
     const db = getDb();
@@ -251,9 +252,9 @@ export const taskService = {
 // Category operations
 export const categoryService = {
   // Get all categories with icons
-  getAllCategories: async (userId?: number): Promise<Category[]> => {
+  getAllCategories: async (userId?: number, headers?: { cookie?: string }): Promise<Category[]> => {
     if (isDevelopment) {
-      return dbService.getAllCategories(userId);
+      return dbService.getAllCategories(userId, headers);
     }
     
     const db = getDb();
@@ -265,9 +266,9 @@ export const categoryService = {
   },
 
   // Create or update a category
-  saveCategory: async (category: Category): Promise<Category> => {
+  saveCategory: async (category: Category, headers?: { cookie?: string }): Promise<Category> => {
     if (isDevelopment) {
-      return dbService.saveCategory(category);
+      return dbService.saveCategory(category, headers);
     }
     
     const db = getDb();

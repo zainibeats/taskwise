@@ -12,7 +12,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client";
+import { debugLog, debugError } from "@/lib/debug";
+import { clearAllData } from "@/lib/storage";
 
 export function ClearAllDataButton() {
   const [open, setOpen] = useState(false);
@@ -23,48 +24,22 @@ export function ClearAllDataButton() {
     setIsClearing(true);
     
     try {
-      // Clear database - get all tasks and delete them
-      const tasks = await TaskApi.getAllTasks();
-      console.log("[DEBUG] Found tasks to delete:", tasks.length);
+      // Use the centralized clearAllData utility function from storage.ts
+      debugLog("Starting data clear operation");
+      const success = await clearAllData();
       
-      // Delete all tasks in parallel
-      if (tasks.length > 0) {
-        await Promise.all(
-          tasks.map(task => TaskApi.deleteTask(task.id))
-        );
-        console.log("[DEBUG] Deleted all tasks from database");
+      if (!success) {
+        throw new Error("Data clear operation failed");
       }
       
-      // Clear custom categories
-      const categories = await CategoryApi.getAllCategories();
-      const customCategoryNames = Object.keys(categories).filter(
-        // Only delete custom categories, not built-in ones
-        name => !["Work", "Home", "Errands", "Personal", "Health", 
-                "Finance", "Education", "Social", "Travel", "Other"].includes(name)
-      );
-      
-      if (customCategoryNames.length > 0) {
-        await Promise.all(
-          customCategoryNames.map(name => CategoryApi.deleteCategory(name))
-        );
-        console.log("[DEBUG] Deleted custom categories from database:", customCategoryNames);
-      }
-      
-      // Clear user settings (including API key)
-      const settings = await UserSettingsApi.getAllSettings();
-      if (Object.keys(settings).length > 0) {
-        await Promise.all(
-          Object.keys(settings).map(key => UserSettingsApi.deleteSetting(key))
-        );
-        console.log("[DEBUG] Deleted user settings from database");
-      }
+      debugLog("Successfully cleared all data");
       
       toast({ 
         title: "All TaskWise data deleted",
         description: "Your data has been cleared from the database" 
       });
     } catch (error) {
-      console.error("[DEBUG] Error clearing database data:", error);
+      debugError("Error clearing database data:", error);
       toast({ 
         title: "Error", 
         description: "Could not clear database data",

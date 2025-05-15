@@ -16,9 +16,11 @@ export async function OPTIONS() {
 }
 
 // GET /api/tasks - Get all tasks
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const tasks = await taskService.getAllTasks();
+    // Extract cookies from request and pass them to the service
+    const cookie = request.headers.get('cookie') || '';
+    const tasks = await taskService.getAllTasks(undefined, { cookie });
     return setCorsHeaders(NextResponse.json(tasks));
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -34,6 +36,9 @@ export async function GET() {
 // POST /api/tasks - Create a new task
 export async function POST(request: NextRequest) {
   try {
+    // Extract cookies from request
+    const cookie = request.headers.get('cookie') || '';
+    
     // Get the user from the session
     const user = await getUserFromSession(request);
     const userId = user?.id;
@@ -45,8 +50,8 @@ export async function POST(request: NextRequest) {
       return setCorsHeaders(NextResponse.json({ error: 'Title is required' }, { status: 400 }));
     }
     
-    // Create task with user ID
-    const task = await taskService.createTask(taskData, userId);
+    // Create task with user ID and pass cookies
+    const task = await taskService.createTask(taskData, userId, { cookie });
     return setCorsHeaders(NextResponse.json(task, { status: 201 }));
   } catch (error) {
     console.error('Error creating task:', error);

@@ -1,5 +1,6 @@
 import { Task } from "@/app/types/task";
 import { Category } from "@/app/types";
+import { debugLog, debugError } from "./debug";
 
 // Base URL for API 
 // In browser, use relative paths for better HTTPS compatibility
@@ -17,20 +18,20 @@ export const TaskApi = {
    * @returns Array of tasks or empty array if failed
    */
   async getAllTasks(): Promise<Task[]> {
-    console.log("[API] Starting getAllTasks...");
+    debugLog("Starting getAllTasks...");
     const apiUrl = typeof window !== 'undefined' ? `${API_BASE_URL}/tasks` : `${API_BASE_URL}/tasks`;
-    console.log("[API] Using API URL:", apiUrl);
+    debugLog("Using API URL:", apiUrl);
     try {
       const response = await fetch(apiUrl, {
         credentials: 'include', // Include cookies for authentication
       });
-      console.log("[API] Response status:", response.status);
+      debugLog("Response status:", response.status);
       if (!response.ok) {
-        console.error("[API] Response not OK:", response.status, response.statusText);
+        debugError("Response not OK:", response.status, response.statusText);
         throw new Error(`Failed to fetch tasks: ${response.status}`);
       }
       const tasks = await response.json();
-      console.log("[API] Tasks received:", tasks);
+      debugLog("Tasks received:", tasks);
       
       // Convert task IDs from number to string for frontend compatibility
       const mappedTasks = tasks.map((task: any) => ({
@@ -48,10 +49,10 @@ export const TaskApi = {
         priority: task.priority_score // Map priority_score to priority for frontend
       }));
       
-      console.log("[API] Mapped tasks:", mappedTasks);
+      debugLog("Mapped tasks:", mappedTasks);
       return mappedTasks;
     } catch (error) {
-      console.error('[API] Error fetching tasks:', error);
+      debugError('Error fetching tasks:', error);
       return [];
     }
   },
@@ -107,7 +108,7 @@ export const TaskApi = {
         priority: createdTask.priority_score
       };
     } catch (error) {
-      console.error('Error creating task:', error);
+      debugError('Error creating task:', error);
       return null;
     }
   },
@@ -167,7 +168,7 @@ export const TaskApi = {
         priority: updatedTask.priority_score
       };
     } catch (error) {
-      console.error('Error updating task:', error);
+      debugError('Error updating task:', error);
       return null;
     }
   },
@@ -190,7 +191,7 @@ export const TaskApi = {
 
       return true;
     } catch (error) {
-      console.error('Error deleting task:', error);
+      debugError('Error deleting task:', error);
       return false;
     }
   },
@@ -228,7 +229,7 @@ export const TaskApi = {
         priority: updatedTask.priority_score
       };
     } catch (error) {
-      console.error('Error toggling task completion:', error);
+      debugError('Error in toggleTaskCompletion:', error);
       return null;
     }
   }
@@ -243,20 +244,20 @@ export const CategoryApi = {
    * @returns Object with category names and icons
    */
   async getAllCategories(): Promise<Record<string, string>> {
-    console.log("[API] Starting getAllCategories...");
-    console.log("[API] Using API URL:", `${API_BASE_URL}/categories`);
+    debugLog("Starting getAllCategories...");
+    debugLog("Using API URL:", `${API_BASE_URL}/categories`);
     try {
       const response = await fetch(`${API_BASE_URL}/categories`, {
         credentials: 'include', // Include cookies for authentication
       });
-      console.log("[API] Categories response status:", response.status);
+      debugLog("Categories response status:", response.status);
       if (!response.ok) {
-        console.error("[API] Categories response not OK:", response.status, response.statusText);
+        debugError("Categories response not OK:", response.status, response.statusText);
         throw new Error(`Failed to fetch categories: ${response.status}`);
       }
       
       const categories = await response.json();
-      console.log("[API] Categories received:", categories);
+      debugLog("Categories received:", categories);
       
       // Convert array to object format
       const categoryObj: Record<string, string> = {};
@@ -264,10 +265,10 @@ export const CategoryApi = {
         categoryObj[category.name] = category.icon;
       });
       
-      console.log("[API] Mapped categories:", categoryObj);
+      debugLog("Mapped categories:", categoryObj);
       return categoryObj;
     } catch (error) {
-      console.error('[API] Error fetching categories:', error);
+      debugError('Error fetching categories:', error);
       return {};
     }
   },
@@ -279,8 +280,8 @@ export const CategoryApi = {
    * @returns Whether save was successful
    */
   async saveCategory(name: string, icon: string): Promise<boolean> {
-    console.log("[API] Saving category:", name, icon);
-    console.log("[API] Using API URL:", `${API_BASE_URL}/categories`);
+    debugLog("Saving category:", name, icon);
+    debugLog("Using API URL:", `${API_BASE_URL}/categories`);
     try {
       const response = await fetch(`${API_BASE_URL}/categories`, {
         method: 'POST',
@@ -291,16 +292,16 @@ export const CategoryApi = {
         credentials: 'include', // Include cookies for authentication
       });
 
-      console.log("[API] Save category response status:", response.status);
+      debugLog("Save category response status:", response.status);
       if (!response.ok) {
-        console.error("[API] Save category response not OK:", response.status, response.statusText);
+        debugError("Save category response not OK:", response.status, response.statusText);
         throw new Error(`Failed to save category: ${response.status}`);
       }
 
-      console.log("[API] Category saved successfully:", name);
+      debugLog("Category saved successfully:", name);
       return true;
     } catch (error) {
-      console.error('[API] Error saving category:', error);
+      debugError('Error saving category:', error);
       return false;
     }
   },
@@ -311,11 +312,11 @@ export const CategoryApi = {
    * @returns Whether deletion was successful
    */
   async deleteCategory(name: string): Promise<boolean> {
-    console.log("[API] Deleting category:", name);
+    debugLog("Deleting category:", name);
     const url = `${API_BASE_URL}/categories?name=${encodeURIComponent(name)}`;
-    console.log("[API] Using API URL:", url);
+    debugLog("Using API URL:", url);
     try {
-      console.log("[API] Making DELETE request to:", url);
+      debugLog("Making DELETE request to:", url);
       const response = await fetch(url, {
         method: 'DELETE',
         headers: {
@@ -324,21 +325,21 @@ export const CategoryApi = {
         credentials: 'include', // Include cookies for authentication
       });
 
-      console.log("[API] Delete category response:", response);
-      console.log("[API] Delete category response status:", response.status);
+      debugLog("Delete category response:", response);
+      debugLog("Delete category response status:", response.status);
       
       if (!response.ok) {
-        console.error("[API] Delete category response not OK:", response.status, response.statusText);
+        debugError("Delete category response not OK:", response.status, response.statusText);
         const errorText = await response.text();
-        console.error("[API] Error response body:", errorText);
+        debugError("Error response body:", errorText);
         throw new Error(`Failed to delete category: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log("[API] Category deleted successfully:", name, "Response:", result);
+      debugLog("Category deleted successfully:", name, "Response:", result);
       return true;
     } catch (error) {
-      console.error('[API] Error deleting category:', error);
+      debugError('Error deleting category:', error);
       return false;
     }
   }
@@ -354,24 +355,24 @@ export const UserSettingsApi = {
    */
   async getAllSettings(): Promise<Record<string, string>> {
     try {
-      console.log("Fetching all user settings");
+      debugLog("Fetching all user settings");
       const response = await fetch(`${API_BASE_URL}/user-settings`, {
         credentials: 'include', // Include cookies for authentication
       });
       
       if (!response.ok) {
         if (response.status === 401) {
-          console.error("Authentication error fetching settings - not logged in");
+          debugError("Authentication error fetching settings - not logged in");
           return {};
         }
         throw new Error(`Failed to fetch settings: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log(`Got ${Object.keys(data).length} settings`);
+      debugLog(`Got ${Object.keys(data).length} settings`);
       return data;
     } catch (error) {
-      console.error('Error fetching user settings:', error);
+      debugError('Error fetching user settings:', error);
       return {};
     }
   },
@@ -383,28 +384,28 @@ export const UserSettingsApi = {
    */
   async getSetting(key: string): Promise<string | null> {
     try {
-      console.log(`Fetching setting: ${key}`);
+      debugLog(`Fetching setting: ${key}`);
       const response = await fetch(`${API_BASE_URL}/user-settings/${encodeURIComponent(key)}`, {
         credentials: 'include', // Include cookies for authentication
       });
       
       if (!response.ok) {
         if (response.status === 404) {
-          console.log(`Setting not found: ${key}`);
+          debugLog(`Setting not found: ${key}`);
           return null; // Setting not found
         }
         if (response.status === 401) {
-          console.error(`Authentication error fetching setting: ${key} - not logged in`);
+          debugError(`Authentication error fetching setting: ${key} - not logged in`);
           return null;
         }
         throw new Error(`Failed to fetch setting: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log(`Got setting ${key}, value length: ${result.value?.length || 0}`);
+      debugLog(`Got setting ${key}, value length: ${result.value?.length || 0}`);
       return result.value;
     } catch (error) {
-      console.error(`Error fetching setting '${key}':`, error);
+      debugError(`Error fetching setting '${key}':`, error);
       return null;
     }
   },
@@ -417,7 +418,7 @@ export const UserSettingsApi = {
    */
   async saveSetting(key: string, value: string): Promise<boolean> {
     try {
-      console.log(`Saving setting: ${key}, value length: ${value?.length || 0}`);
+      debugLog(`Saving setting: ${key}, value length: ${value?.length || 0}`);
       const response = await fetch(`${API_BASE_URL}/user-settings`, {
         method: 'POST',
         headers: {
@@ -429,7 +430,7 @@ export const UserSettingsApi = {
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.error(`Authentication error saving setting: ${key} - not logged in`);
+          debugError(`Authentication error saving setting: ${key} - not logged in`);
           return false;
         }
         
@@ -438,10 +439,10 @@ export const UserSettingsApi = {
         throw new Error(`Failed to save setting: ${response.status}`);
       }
 
-      console.log(`Successfully saved setting: ${key}`);
+      debugLog(`Successfully saved setting: ${key}`);
       return true;
     } catch (error) {
-      console.error(`Error saving setting '${key}':`, error);
+      debugError(`Error saving setting '${key}':`, error);
       return false;
     }
   },
@@ -453,7 +454,7 @@ export const UserSettingsApi = {
    */
   async deleteSetting(key: string): Promise<boolean> {
     try {
-      console.log(`Deleting setting: ${key}`);
+      debugLog(`Deleting setting: ${key}`);
       const response = await fetch(`${API_BASE_URL}/user-settings/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for authentication
@@ -467,10 +468,10 @@ export const UserSettingsApi = {
         throw new Error(`Failed to delete setting: ${response.status}`);
       }
 
-      console.log(`Successfully deleted setting: ${key}`);
+      debugLog(`Successfully deleted setting: ${key}`);
       return true;
     } catch (error) {
-      console.error(`Error deleting setting '${key}':`, error);
+      debugError(`Error deleting setting '${key}':`, error);
       return false;
     }
   }

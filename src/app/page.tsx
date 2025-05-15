@@ -39,13 +39,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { conditionalToast } from "@/lib/toast-utils";
+import { debugLog, debugError } from "@/lib/debug";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import Image from 'next/image'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToastAction } from "@/components/ui/toast"
 import { HistoryControls } from "@/components/history-controls";
-import { clearAllData } from "@/lib/storage";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 import { ModeToggle } from "@/components/theme-toggle";
@@ -125,7 +125,7 @@ function TaskWiseApp() {
           router.push('/login');
         }
       } catch (error) {
-        console.error('Error checking authentication:', error);
+        debugError('Error checking authentication:', error);
         // Assume not authenticated on error
         setIsAuthenticated(false);
         router.push('/login');
@@ -138,8 +138,8 @@ function TaskWiseApp() {
   }, [router]);
   
   // Debug logging for environment variables
-  console.log("[DEBUG] API URL from env:", process.env.NEXT_PUBLIC_API_URL);
-  console.log("[DEBUG] API Base URL:", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
+  debugLog("API URL from env:", process.env.NEXT_PUBLIC_API_URL);
+  debugLog("API Base URL:", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
   
   // List of built-in categories (cannot be deleted by user)
   const builtInCategories = [
@@ -164,9 +164,9 @@ function TaskWiseApp() {
       if (!isAuthenticated) return;
       
       try {
-        console.log("[DEBUG] Fetching tasks from API...");
+        debugLog("Fetching tasks from API...");
         const apiTasks = await TaskApi.getAllTasks();
-        console.log("[DEBUG] API tasks received:", apiTasks);
+        debugLog("API tasks received:", apiTasks);
         
         if (apiTasks && apiTasks.length > 0) {
           // Use the API tasks
@@ -174,16 +174,16 @@ function TaskWiseApp() {
           setHistoryIndex(0);
           conditionalToast({ title: "Tasks loaded from database" }, "load_tasks");
         } else {
-          console.log("[DEBUG] No tasks from API, using default tasks");
+          debugLog("No tasks from API, using default tasks");
           // We no longer use localStorage as fallback
-          console.log("[DEBUG] Using default tasks");
+          debugLog("Using default tasks");
           setHistory([defaultTasks]);
           setHistoryIndex(0);
         }
       } catch (error) {
-        console.error("[DEBUG] Error loading tasks from API:", error);
+        debugError("Error loading tasks from API:", error);
         // Use default tasks as fallback
-        console.log("[DEBUG] Using default tasks due to API error");
+        debugLog("Using default tasks due to API error");
         setHistory([defaultTasks]);
         setHistoryIndex(0);
         toast({ 
