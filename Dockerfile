@@ -2,7 +2,7 @@
 FROM node:22-alpine
 
 # Install dependencies required for better-sqlite3 and bcrypt
-RUN apk add --no-cache python3 make g++ gcc libc-dev sqlite sqlite-dev
+RUN apk update && apk upgrade --no-cache && apk add --no-cache python3 make g++ gcc libc-dev sqlite sqlite-dev
 
 # Set working directory
 WORKDIR /app
