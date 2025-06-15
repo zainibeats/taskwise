@@ -1,6 +1,6 @@
-# TaskWise: AI-Powered Todo List Application
+# TaskWise: AI-Powered To-Do List Application
 
-TaskWise is an intelligent todo list application that uses AI to help you manage your tasks more effectively. The application prioritizes your tasks, suggests subtasks, and categorizes items automatically to streamline your productivity workflow.
+TaskWise is an intelligent to-do list application that uses AI to help you manage your tasks more effectively. The application prioritizes your tasks, suggests subtasks, and categorizes items automatically to streamline your productivity workflow.
 
 ## ✨ Features
 
