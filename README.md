@@ -1,5 +1,7 @@
 # TaskWise: AI-Powered To-Do List Application
 
+> **Note**: This project contains AI-generated code.
+
 TaskWise is an intelligent to-do list application that uses AI to help you manage your tasks more effectively. The application prioritizes your tasks, suggests subtasks, and categorizes items automatically to streamline your productivity workflow.
 
 ## ✨ Features
