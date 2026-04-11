@@ -11,9 +11,7 @@ import { useDatePicker } from "./hooks/useDatePicker";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,16 +40,13 @@ import { conditionalToast } from "@/lib/toast-utils";
 import { debugLog, debugError } from "@/lib/debug";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import Image from 'next/image'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToastAction } from "@/components/ui/toast"
 import { HistoryControls } from "@/components/history-controls";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
-import { ModeToggle } from "@/components/theme-toggle";
-import { ClearAllDataButton } from "@/components/ClearAllDataButton";
-import { SettingsMenu } from "@/components/settings-menu";
 import { CreateCategoryModal } from "@/components/CreateCategoryModal";
+import { AppHeader } from "@/components/app-header";
 
 import type { Task, Subtask } from "./types/task";
 
@@ -662,23 +657,7 @@ function TaskWiseApp() {
       {/* Header row with theme toggle removed; trashcan now in layout */}
       <div className="mb-2" />
       <Card className="relative">
-        <div className="absolute top-6 right-6 z-10 flex items-center space-x-2">
-          <SettingsMenu />
-          <ModeToggle />
-          <ClearAllDataButton />
-        </div>
-        <CardHeader className="flex flex-col items-center text-center">
-          <Image
-            src="/images/logo.png"
-            alt="TaskWise Logo"
-            width={128}
-            height={128}
-          />
-          <CardTitle className="mt-2">TaskWise</CardTitle>
-          <CardDescription>
-            Organize your life with AI-powered task management.
-          </CardDescription>
-        </CardHeader>
+        <AppHeader />
         <CardContent>
           <div className="mb-4 flex flex-wrap items-center gap-2 max-w-full overflow-hidden">
             <Input
