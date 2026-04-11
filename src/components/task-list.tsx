@@ -1,24 +1,7 @@
 // src/components/task-list.tsx
 import React from 'react';
 import { TaskItem } from './task-item'; // Assuming task-item.tsx is in the same directory
-
-// TODO: Move these interfaces to src/types/index.ts later
-interface SubTask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  priority?: number;
-  deadline?: Date;
-  completed: boolean;
-  subtasks: SubTask[];
-}
+import type { Task } from '@/app/types/task';
 
 interface TaskListProps {
   tasks: Task[];

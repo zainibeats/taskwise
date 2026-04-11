@@ -14,3 +14,17 @@ export interface Task {
   subtasks?: Subtask[];
   completed: boolean;
 }
+
+export interface Category {
+  id?: number;
+  name: string;
+  icon: string;
+  userId?: number;
+}
+
+export interface UserSettings {
+  id?: number;
+  userId: number;
+  key: string;
+  value?: string;
+}

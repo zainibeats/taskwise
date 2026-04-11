@@ -9,23 +9,7 @@ import {
   DropdownMenuTrigger
 } from "./ui/dropdown-menu";
 import { suggestSubtasks } from '../ai/flows/suggest-subtasks';
-
-interface SubTask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  priority?: number;
-  deadline?: Date;
-  completed: boolean;
-  subtasks: SubTask[];
-}
+import type { Task } from '@/app/types/task';
 
 interface TaskItemProps {
   task: Task;

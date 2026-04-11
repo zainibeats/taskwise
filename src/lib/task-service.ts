@@ -1,5 +1,8 @@
 import getDbConnection, { dbService } from './db';
-import { Task, Subtask, Category } from '../app/types';
+// DB row types - will be properly typed during DB consolidation (Task 5)
+type DbTask = any;
+type DbSubtask = any;
+type DbCategory = any;
 import { categorizeTask } from '@/ai/flows/categorize-task';
 import { prioritizeTask } from '@/ai/flows/prioritize-task';
 import { suggestSubtasks } from '@/ai/flows/suggest-subtasks';
@@ -13,39 +16,39 @@ const getDb = () => getDbConnection();
 // Task operations
 export const taskService = {
   // Get all tasks
-  getAllTasks: async (userId?: number, headers?: { cookie?: string }): Promise<Task[]> => {
+  getAllTasks: async (userId?: number, headers?: { cookie?: string }): Promise<DbTask[]> => {
     if (isDevelopment) {
       // Pass the headers to the database service
       return dbService.getAllTasks(headers);
     }
-    
+
     const db = getDb();
-    const tasks = db.prepare('SELECT * FROM tasks ORDER BY priority_score DESC').all() as Task[];
-    
+    const tasks = db.prepare('SELECT * FROM tasks ORDER BY priority_score DESC').all() as DbTask[];
+
     // Get subtasks for each task
     return tasks.map(task => {
-      const subtasks = db.prepare('SELECT * FROM subtasks WHERE task_id = ?').all(task.id) as Subtask[];
+      const subtasks = db.prepare('SELECT * FROM subtasks WHERE task_id = ?').all(task.id) as DbSubtask[];
       return { ...task, subtasks };
     });
   },
 
   // Get task by ID
-  getTaskById: async (id: number): Promise<Task | undefined> => {
+  getTaskById: async (id: number): Promise<DbTask | undefined> => {
     if (isDevelopment) {
       return dbService.getTaskById(id);
     }
-    
+
     const db = getDb();
-    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
-    
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as DbTask | undefined;
+
     if (!task) return undefined;
-    
-    const subtasks = db.prepare('SELECT * FROM subtasks WHERE task_id = ?').all(task.id) as Subtask[];
+
+    const subtasks = db.prepare('SELECT * FROM subtasks WHERE task_id = ?').all(task.id) as DbSubtask[];
     return { ...task, subtasks };
   },
 
   // Create a new task
-  createTask: async (task: Omit<Task, 'id'>, userId?: number, headers?: { cookie?: string }): Promise<Task> => {
+  createTask: async (task: Omit<DbTask, 'id'>, userId?: number, headers?: { cookie?: string }): Promise<DbTask> => {
     if (isDevelopment) {
       return dbService.createTask(task, userId, headers);
     }
@@ -129,18 +132,18 @@ export const taskService = {
       // Add provided subtasks if any
       const insertSubtask = db.prepare('INSERT INTO subtasks (task_id, description, is_completed) VALUES (?, ?, ?)');
       
-      subtasks.forEach((subtask: Subtask) => {
+      subtasks.forEach((subtask: DbSubtask) => {
         insertSubtask.run(taskId, subtask.description, subtask.is_completed ? 1 : 0);
       });
     }
-    
+
     const newTask = await taskService.getTaskById(taskId);
     if (!newTask) throw new Error('Failed to create task');
     return newTask;
   },
 
   // Update an existing task
-  updateTask: async (id: number, updates: Partial<Task>): Promise<Task | undefined> => {
+  updateTask: async (id: number, updates: Partial<DbTask>): Promise<DbTask | undefined> => {
     if (isDevelopment) {
       return dbService.updateTask(id, updates);
     }
@@ -211,7 +214,7 @@ export const taskService = {
       if (subtasks.length > 0) {
         const insertSubtask = db.prepare('INSERT INTO subtasks (task_id, description, is_completed) VALUES (?, ?, ?)');
         
-        subtasks.forEach((subtask: Subtask) => {
+        subtasks.forEach((subtask: DbSubtask) => {
           insertSubtask.run(id, subtask.description, subtask.is_completed ? 1 : 0);
         });
       }
@@ -233,7 +236,7 @@ export const taskService = {
   },
 
   // Toggle task completion
-  toggleTaskCompletion: async (id: number): Promise<Task | undefined> => {
+  toggleTaskCompletion: async (id: number): Promise<DbTask | undefined> => {
     if (isDevelopment) {
       return dbService.toggleTaskCompletion(id);
     }
@@ -252,21 +255,21 @@ export const taskService = {
 // Category operations
 export const categoryService = {
   // Get all categories with icons
-  getAllCategories: async (userId?: number, headers?: { cookie?: string }): Promise<Category[]> => {
+  getAllCategories: async (userId?: number, headers?: { cookie?: string }): Promise<DbCategory[]> => {
     if (isDevelopment) {
       return dbService.getAllCategories(userId, headers);
     }
-    
+
     const db = getDb();
     if (userId) {
-      return db.prepare('SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL').all(userId) as Category[];
+      return db.prepare('SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL').all(userId) as DbCategory[];
     } else {
-      return db.prepare('SELECT * FROM categories').all() as Category[];
+      return db.prepare('SELECT * FROM categories').all() as DbCategory[];
     }
   },
 
   // Create or update a category
-  saveCategory: async (category: Category, headers?: { cookie?: string }): Promise<Category> => {
+  saveCategory: async (category: DbCategory, headers?: { cookie?: string }): Promise<DbCategory> => {
     if (isDevelopment) {
       return dbService.saveCategory(category, headers);
     }
