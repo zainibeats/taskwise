@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, lazy, Suspense, useRef, useEffect } from "react";
+import React, { useState, lazy, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getStoredTasks, saveTasks } from "@/lib/storage";
+import { saveTasks } from "@/lib/storage";
 import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client"; // Import API client
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
@@ -13,19 +13,14 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { prioritizeTask } from "@/ai/flows/prioritize-task";
 import { categorizeTask } from "@/ai/flows/categorize-task";
 import { suggestSubtasks } from "@/ai/flows/suggest-subtasks";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format, isPast } from "date-fns";
-import { Icons } from "@/components/icons";
+import { format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,15 +33,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { conditionalToast } from "@/lib/toast-utils";
 import { debugLog, debugError } from "@/lib/debug";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { ToastAction } from "@/components/ui/toast"
-import { HistoryControls } from "@/components/history-controls";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
-import { CreateCategoryModal } from "@/components/CreateCategoryModal";
 import { AppHeader } from "@/components/app-header";
+import { TaskCreator } from "@/components/task-creator";
 
 import type { Task, Subtask } from "./types/task";
 
@@ -659,172 +650,30 @@ function TaskWiseApp() {
       <Card className="relative">
         <AppHeader />
         <CardContent>
-          <div className="mb-4 flex flex-wrap items-center gap-2 max-w-full overflow-hidden">
-            <Input
-  type="text"
-  placeholder="Add a task..."
-  value={newTaskTitle}
-  onChange={(e) => setNewTaskTitle(e.target.value)}
-  className="flex-grow"
-  onKeyDown={(e) => {
-    if (e.key === "Enter" && !isLoading && !isAiLoading) {
-      handleAddTask();
-    }
-  }}
-/>
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 w-full sm:w-auto">
-              <div className="category-green-select">
-                <Select
-                  key={selectedCategory ?? 'no-selection'}
-                  onValueChange={(value) => {
-                    if (value === 'create_new') {
-                      setIsCreateCategoryOpen(true);
-                      // Don't change the selection
-                      return;
-                    }
-                    handleCategorySelect(value);
-                  }}
-                  value={selectedCategory}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-56 overflow-y-auto">
-                    {Object.entries(categoryIconsState).map(([category, icon]) => (
-                      <SelectItem key={category} value={category}>
-                        {icon} {category}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="create_new">
-                      Create New
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <CreateCategoryModal
-                  open={isCreateCategoryOpen}
-                  onOpenChange={setIsCreateCategoryOpen}
-                  onCreate={handleCreateCategory}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSelectedCategory(undefined)}
-                disabled={!selectedCategory}
-                className="border border-gray-300 category-clear-btn flex-shrink-0"
-              >
-                Clear Selection
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Manage Categories"
-                className="ml-1 category-green-btn flex-shrink-0"
-                onClick={() => setIsManageCategoriesOpen(true)}
-              >
-                <Icons.settings className="h-5 w-5" />
-              </Button>
-            </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[240px] justify-start text-left font-normal hover:bg-background hover:border-input hover:text-foreground",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <Icons.calendar className="mr-2 h-4 w-4" />
-                  {selectedDate ? (
-                    format(selectedDate, "PPP")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-  <div className="flex flex-col items-center gap-2 p-2">
-    <Calendar
-      mode="single"
-      selected={selectedDate}
-      onSelect={setSelectedDate}
-      disabled={(date) => date < new Date()}
-      initialFocus
-    />
-    <Button
-      type="button"
-      variant="outline"
-      className="w-full mt-2 category-clear-btn"
-      onClick={() => setSelectedDate(new Date())}
-      disabled={!selectedDate || (selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'))}
-    >
-      Clear Selection
-    </Button>
-  </div>
-</PopoverContent>
-            </Popover>
-
-            {/*
-            Manage Categories Modal
-            Allows the user to delete custom categories. Built-in categories are protected.
-          */}
-          <AlertDialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Manage Custom Categories</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Delete any custom category you no longer need. Built-in categories cannot be deleted.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mt-2">
-                  {Object.entries(categoryIconsState)
-                    .filter(([cat]) => !builtInCategories.includes(cat))
-                    .length === 0 && (
-                      <span className="text-muted-foreground text-sm">No custom categories found.</span>
-                    )}
-                  {Object.entries(categoryIconsState)
-                    .filter(([cat]) => !builtInCategories.includes(cat))
-                    .map(([category, icon]) => (
-                      <div key={category} className="flex items-center justify-between p-2 rounded hover:bg-muted">
-                        <span className="flex items-center gap-2">{icon} {category}</span>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          aria-label={`Delete ${category}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleDeleteCategory(category);
-                          }}
-                        >
-                          <Icons.trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-                <AlertDialogCancel className="mt-4 category-clear-btn">Close</AlertDialogCancel>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            {/*
-              Add Task Button: triggers task creation, disabled while loading
-              HistoryControls: Undo/Redo buttons for task list changes
-            */}
-            <Button onClick={handleAddTask} disabled={isLoading || isAiLoading}>
-              {(isLoading || isAiLoading) ? (
-                <Icons.loader className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                "Add Task"
-              )}
-            </Button>
-            <HistoryControls 
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-            />
-          </div>
+          <TaskCreator
+            newTaskTitle={newTaskTitle}
+            onNewTaskTitleChange={setNewTaskTitle}
+            onAddTask={handleAddTask}
+            isLoading={isLoading}
+            isAiLoading={isAiLoading}
+            categoryIcons={categoryIconsState}
+            selectedCategory={selectedCategory}
+            onCategorySelect={handleCategorySelect}
+            onClearCategory={() => setSelectedCategory(undefined)}
+            builtInCategories={builtInCategories}
+            isManageCategoriesOpen={isManageCategoriesOpen}
+            onManageCategoriesOpenChange={setIsManageCategoriesOpen}
+            onDeleteCategory={handleDeleteCategory}
+            isCreateCategoryOpen={isCreateCategoryOpen}
+            onCreateCategoryOpenChange={setIsCreateCategoryOpen}
+            onCreateCategory={handleCreateCategory}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+          />
 
           {/*
             Task List
@@ -974,51 +823,6 @@ function TaskWiseApp() {
     </div>
   );
 }
-
-interface EmojiPickerProps {
-  onEmojiSelect: (emoji: string) => void;
-  onClose: () => void;
-}
-
-const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => {
-  const emojis = ["🤖", "🍽️", "🪴", "🍼", "🎁", "🎭", "🐾", "🧸", "🌐", "🔐", "🖥️", "🛠️", "💊", "⭐", "📧", "🎉", "🐶", "🐱", "🛐", "📞", "⚽", "🗨️", "🚜", "🎵", "💳", "✏️", "🚗", "🎬"];
-
-  return (
-    <div className="absolute z-10 bg-popover text-popover-foreground shadow-md rounded-md p-2 w-64">
-       <ScrollArea className="h-[200px] w-full rounded-md border">
-          <div className="grid grid-cols-5 gap-2">
-            {emojis.map((emoji) => (
-              <button
-                key={emoji}
-                className="text-2xl hover:bg-[rgba(139,233,253,0.1)] hover:text-[#8be9fd] rounded-md transition-colors"
-                onClick={() => onEmojiSelect(emoji)}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-      </ScrollArea>
-      <Button variant="ghost" className="w-full mt-2 category-green-btn" onClick={onClose}>
-        Close
-      </Button>
-    </div>
-  );
-};
-interface AlertDialogFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const AlertDialogFooter = ({
-                               className,
-                               ...props
-                             }: AlertDialogFooterProps) => (
-  <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
-    )}
-    {...props}
-  />
-)
-AlertDialogFooter.displayName = "AlertDialogFooter"
 
 // Main component that wraps the app with Suspense
 export default function Home() {
