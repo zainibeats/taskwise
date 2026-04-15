@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, lazy, Suspense, useEffect } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { saveTasks } from "@/lib/storage";
 import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client"; // Import API client
@@ -13,14 +13,9 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { prioritizeTask } from "@/ai/flows/prioritize-task";
 import { categorizeTask } from "@/ai/flows/categorize-task";
 import { suggestSubtasks } from "@/ai/flows/suggest-subtasks";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,11 +28,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { conditionalToast } from "@/lib/toast-utils";
 import { debugLog, debugError } from "@/lib/debug";
-import { Label } from "@/components/ui/label";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 import { AppHeader } from "@/components/app-header";
 import { TaskCreator } from "@/components/task-creator";
+import { TaskCardList } from "@/components/task-card-list";
 
 import type { Task, Subtask } from "./types/task";
 
@@ -57,9 +52,6 @@ const defaultTasks: Task[] = [
     completed: false,
   },
 ];
-
-// Lazy load the TaskEditForm component to optimize initial load time.
-const TaskEditForm = lazy(() => import('@/components/TaskEditForm').then(module => ({ default: module.TaskEditForm })));
 
 // Default emoji icons for each built-in category. Used for display and selection.
 const initialCategoryIcons: { [key: string]: string } = {
@@ -608,31 +600,6 @@ function TaskWiseApp() {
   };
 
 
-  // Function to determine border color class based on priority
-  // Returns a CSS class for border color based on priority score
-  function getPriorityBorderClass(priority: number | undefined): string {
-    if (!priority || priority <= 50) return "border-accent"; // Low priority (<= 50) -> Green (Accent)
-    if (priority <= 75) return "border-warning"; // Medium priority (> 50 and <= 75) -> Yellow (Warning)
-    return "border-destructive"; // High priority (> 75) -> Red (Destructive)
-  }
-
-  const taskCategories = [
-    "Work",
-    "Home",
-    "Errands",
-    "Personal",
-    "Health",
-    "Finance",
-    "Education",
-    "Social",
-    "Travel",
-    "Other",
-  ];
-
-  // (category and emoji logic moved to useCategoryActions)
-  // (date picker logic moved to useDatePicker)
-  // (date picker logic moved to useDatePicker)
-
   // Add a loading state for the entire page
   if (isAuthChecking) {
     return (
@@ -675,124 +642,22 @@ function TaskWiseApp() {
             onRedo={handleRedo}
           />
 
-          {/*
-            Task List
-            Renders all tasks with completion, editing, deletion, and subtask controls.
-            Each task card displays title, priority, category, description, deadline, and subtasks.
-          */}
-          <ul className="space-y-2 mt-4">
-            {isLoading ? (
-              // Show loading placeholder while data is being loaded
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="ml-2">Loading tasks...</span>
-              </div>
-            ) : tasks && tasks.length > 0 ? (
-              tasks.map((task) => (
-                <li key={task.id}>
-                  <Card className="shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <div className="flex items-center space-x-2">
-                        {/* Task completion checkbox */}
-                        <Checkbox
-                          id={`task-${task.id}`}
-                          checked={task.completed}
-                          onCheckedChange={(checked) => {
-                            if (typeof checked === 'boolean') {
-                              handleTaskCompletion(task.id, checked);
-                            }
-                          }}
-                        />
-                        {/* Task title with strike-through if completed */}
-                        <Label htmlFor={`task-${task.id}`} style={{ textDecoration: task.completed ? 'line-through' : 'none', opacity: task.completed ? 0.5 : 1 }}>{task.title}</Label>
-                      </div>
-                      {/* Priority and category badge */}
-                      <Badge 
-                        variant="outline"
-                        className={cn(
-                          "border-2",
-                          getPriorityBorderClass(task.priority)
-                        )}
-                      >
-                        {task.category ? `${categoryIconsState[task.category as keyof typeof categoryIconsState]} ${task.category}`: "No Category"} - Priority: {task.priority}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent style={{ opacity: task.completed ? 0.5 : 1 }}>
-                      {/* Show edit form if editing this task */}
-                      {editingTaskId === task.id ? (
-                        <Suspense fallback={<div>Loading...</div>}>
-                           <TaskEditForm
-                             task={task}
-                             onUpdate={(updatedTask) => handleUpdateTask(task.id, updatedTask)}
-                             onCancel={() => setEditingTaskId(null)}
-                             categoryIcons={categoryIconsState} // Pass the category icons
-                             setCategoryIcons={setCategoryIconsState}
-                             isCreateCategoryOpen={isCreateCategoryOpen}
-                             setIsCreateCategoryOpen={setIsCreateCategoryOpen}
-                             onCreateCategory={handleCreateCategory}
-                           />
-                        </Suspense>
-                      ) : (
-                        <>
-                          {/* Task description (if present) */}
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {task.description}
-                            </p>
-                          )}
-                          {/* Deadline (if present) */}
-                          {task.deadline && (
-                            <p className="text-sm text-muted-foreground">
-                              Deadline: {task.deadline ? format(task.deadline, "PPP") : "No deadline"}
-                            </p>
-                          )}
-                          {/* Subtasks (if present) */}
-                          {task.subtasks && task.subtasks.length > 0 && (
-                            <div className="mt-2">
-                              <h4 className="text-sm font-medium">Subtasks:</h4>
-                              <ul className="list-disc pl-4">
-                                {task.subtasks.map((subtask) => (
-                                  <li key={subtask.id} className="text-xs flex items-center space-x-4">
-                                    {/* Subtask completion checkbox */}
-                                    <Checkbox
-                                      id={`subtask-${subtask.id}`}
-                                      checked={subtask.completed}
-                                      onCheckedChange={(checked) => {
-                                        if (typeof checked === 'boolean') {
-                                          handleSubtaskCompletion(task.id, subtask.id, checked);
-                                        }
-                                      }}
-                                    />
-                                    {/* Subtask title with strike-through if completed */}
-                                    <Label htmlFor={`subtask-${subtask.id}`}  style={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}>{subtask.title}</Label>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {/* Edit/Delete controls */}
-                          <div className="flex justify-end space-x-2">
-                            <Button onClick={() => handleEditTask(task)} disabled={task.completed}>Edit</Button>
-                            <Button
-                              variant="destructive"
-                              onClick={() => handleDeleteTask(task.id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </li>
-              ))
-            ) : (
-              // Show message when no tasks are available
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No tasks yet. Create your first task above!</p>
-              </div>
-            )}
-          </ul>
+          <TaskCardList
+            tasks={tasks}
+            isLoading={isLoading}
+            editingTaskId={editingTaskId}
+            categoryIcons={categoryIconsState}
+            onTaskCompletion={handleTaskCompletion}
+            onSubtaskCompletion={handleSubtaskCompletion}
+            onEditTask={handleEditTask}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+            onCancelEdit={() => setEditingTaskId(null)}
+            setCategoryIcons={setCategoryIconsState}
+            isCreateCategoryOpen={isCreateCategoryOpen}
+            setIsCreateCategoryOpen={setIsCreateCategoryOpen}
+            onCreateCategory={handleCreateCategory}
+          />
         </CardContent>
       </Card>
       {/*
