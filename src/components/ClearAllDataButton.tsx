@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { debugLog, debugError } from "@/lib/debug";
-import { clearAllData } from "@/lib/storage";
+import { TaskApi, CategoryApi } from "@/lib/api-client";
 
 export function ClearAllDataButton() {
   const [open, setOpen] = useState(false);
@@ -24,12 +24,24 @@ export function ClearAllDataButton() {
     setIsClearing(true);
     
     try {
-      // Use the centralized clearAllData utility function from storage.ts
       debugLog("Starting data clear operation");
-      const success = await clearAllData();
-      
-      if (!success) {
-        throw new Error("Data clear operation failed");
+
+      // Delete all tasks
+      const tasks = await TaskApi.getAllTasks();
+      for (const task of tasks) {
+        await TaskApi.deleteTask(task.id);
+      }
+
+      // Delete non-built-in categories
+      const builtInCategories = [
+        "Work", "Home", "Errands", "Personal", "Health",
+        "Finance", "Education", "Social", "Travel", "Other"
+      ];
+      const allCategories = await CategoryApi.getAllCategories();
+      for (const category of Object.keys(allCategories)) {
+        if (!builtInCategories.includes(category)) {
+          await CategoryApi.deleteCategory(category);
+        }
       }
       
       debugLog("Successfully cleared all data");

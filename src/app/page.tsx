@@ -2,8 +2,7 @@
 
 import React, { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { saveTasks } from "@/lib/storage";
-import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client"; // Import API client
+import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
 import { useCategoryActions } from "./hooks/useCategoryActions";
@@ -230,24 +229,9 @@ function TaskWiseApp() {
     toast,
   });
   
-  // Wrap pushHistory to save to the database
-  const pushHistory = async (newTasksState: Task[]) => {
+  // Wrap pushHistory — individual task operations already call the API directly
+  const pushHistory = (newTasksState: Task[]) => {
     originalPushHistory(newTasksState);
-    
-    // Save to the database
-    try {
-      await saveTasks(newTasksState);
-      console.log("[DEBUG] Tasks saved to database");
-    } catch (error) {
-      console.error("[DEBUG] Error saving tasks to database:", error);
-      toast({
-        title: "Error saving tasks",
-        description: "Changes may not persist after reload",
-        variant: "destructive"
-      });
-    }
-    
-    console.log("[DEBUG] Tasks updated in state:", newTasksState);
   };
 
   // Loading state for AI operations (separate from initial data loading)
