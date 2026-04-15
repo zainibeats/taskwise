@@ -1,4 +1,4 @@
-import getDbConnection, { dbService } from './db';
+import getDbConnection from './db';
 // DB row types - will be properly typed during DB consolidation (Task 5)
 type DbTask = any;
 type DbSubtask = any;
@@ -7,21 +7,13 @@ import { categorizeTask } from '@/ai/flows/categorize-task';
 import { prioritizeTask } from '@/ai/flows/prioritize-task';
 import { suggestSubtasks } from '@/ai/flows/suggest-subtasks';
 
-// Determine if we're in development mode
-const isDevelopment = process.env.NODE_ENV === 'development';
-
 // Get database connection
 const getDb = () => getDbConnection();
 
 // Task operations
 export const taskService = {
   // Get all tasks
-  getAllTasks: async (userId?: number, headers?: { cookie?: string }): Promise<DbTask[]> => {
-    if (isDevelopment) {
-      // Pass the headers to the database service
-      return dbService.getAllTasks(headers);
-    }
-
+  getAllTasks: async (userId?: number): Promise<DbTask[]> => {
     const db = getDb();
     const tasks = db.prepare('SELECT * FROM tasks ORDER BY priority_score DESC').all() as DbTask[];
 
@@ -34,10 +26,6 @@ export const taskService = {
 
   // Get task by ID
   getTaskById: async (id: number): Promise<DbTask | undefined> => {
-    if (isDevelopment) {
-      return dbService.getTaskById(id);
-    }
-
     const db = getDb();
     const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as DbTask | undefined;
 
@@ -48,11 +36,7 @@ export const taskService = {
   },
 
   // Create a new task
-  createTask: async (task: Omit<DbTask, 'id'>, userId?: number, headers?: { cookie?: string }): Promise<DbTask> => {
-    if (isDevelopment) {
-      return dbService.createTask(task, userId, headers);
-    }
-    
+  createTask: async (task: Omit<DbTask, 'id'>, userId?: number): Promise<DbTask> => {
     const db = getDb();
     const { title, description, deadline, importance, category, priority_score, is_completed = false, subtasks = [] } = task;
     
@@ -144,10 +128,6 @@ export const taskService = {
 
   // Update an existing task
   updateTask: async (id: number, updates: Partial<DbTask>): Promise<DbTask | undefined> => {
-    if (isDevelopment) {
-      return dbService.updateTask(id, updates);
-    }
-    
     const db = getDb();
     const { title, description, deadline, importance, category, priority_score, is_completed, subtasks } = updates;
     
@@ -225,11 +205,6 @@ export const taskService = {
 
   // Delete a task
   deleteTask: async (id: number): Promise<boolean> => {
-    if (isDevelopment) {
-      await dbService.deleteTask(id);
-      return true;
-    }
-    
     const db = getDb();
     const result = db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
     return result.changes > 0;
@@ -237,10 +212,6 @@ export const taskService = {
 
   // Toggle task completion
   toggleTaskCompletion: async (id: number): Promise<DbTask | undefined> => {
-    if (isDevelopment) {
-      return dbService.toggleTaskCompletion(id);
-    }
-    
     const db = getDb();
     const task = await taskService.getTaskById(id);
     if (!task) return undefined;
@@ -255,11 +226,7 @@ export const taskService = {
 // Category operations
 export const categoryService = {
   // Get all categories with icons
-  getAllCategories: async (userId?: number, headers?: { cookie?: string }): Promise<DbCategory[]> => {
-    if (isDevelopment) {
-      return dbService.getAllCategories(userId, headers);
-    }
-
+  getAllCategories: async (userId?: number): Promise<DbCategory[]> => {
     const db = getDb();
     if (userId) {
       return db.prepare('SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL').all(userId) as DbCategory[];
@@ -269,11 +236,7 @@ export const categoryService = {
   },
 
   // Create or update a category
-  saveCategory: async (category: DbCategory, headers?: { cookie?: string }): Promise<DbCategory> => {
-    if (isDevelopment) {
-      return dbService.saveCategory(category, headers);
-    }
-    
+  saveCategory: async (category: DbCategory): Promise<DbCategory> => {
     const db = getDb();
     const { name, icon, user_id } = category;
     
@@ -298,10 +261,6 @@ export const categoryService = {
 
   // Delete a category
   deleteCategory: async (name: string, userId?: number): Promise<boolean> => {
-    if (isDevelopment) {
-      return dbService.deleteCategory(name, userId);
-    }
-    
     const db = getDb();
     
     // Only allow deleting user-specific categories, not built-in ones

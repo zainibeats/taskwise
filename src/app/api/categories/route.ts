@@ -18,9 +18,6 @@ export async function OPTIONS() {
 // GET /api/categories - Get all categories
 export async function GET(request: NextRequest) {
   try {
-    // Extract cookies from request
-    const cookie = request.headers.get('cookie') || '';
-    
     // Get current user
     const session = await getCurrentSession();
     if (!session || !session.user) {
@@ -28,10 +25,9 @@ export async function GET(request: NextRequest) {
         NextResponse.json({ error: 'Authentication required' }, { status: 401 })
       );
     }
-    
+
     const userId = session.user.id;
-    // Get categories for this user (including system defaults) and pass cookies
-    const categories = await categoryService.getAllCategories(userId, { cookie });
+    const categories = await categoryService.getAllCategories(userId);
     return setCorsHeaders(NextResponse.json(categories));
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -47,9 +43,6 @@ export async function GET(request: NextRequest) {
 // POST /api/categories - Create or update a category
 export async function POST(request: NextRequest) {
   try {
-    // Extract cookies from request
-    const cookie = request.headers.get('cookie') || '';
-    
     // Get current user
     const session = await getCurrentSession();
     if (!session || !session.user) {
@@ -57,25 +50,24 @@ export async function POST(request: NextRequest) {
         NextResponse.json({ error: 'Authentication required' }, { status: 401 })
       );
     }
-    
+
     const userId = session.user.id;
     const categoryData = await request.json();
-    
+
     // Validate required fields
     if (!categoryData.name || !categoryData.icon) {
       return setCorsHeaders(
         NextResponse.json({ error: 'Name and icon are required' }, { status: 400 })
       );
     }
-    
+
     // Add user_id to the category data
     const categoryWithUser = {
       ...categoryData,
       user_id: userId
     };
-    
-    // Pass the cookies to the service
-    const category = await categoryService.saveCategory(categoryWithUser, { cookie });
+
+    const category = await categoryService.saveCategory(categoryWithUser);
     return setCorsHeaders(NextResponse.json(category, { status: 201 }));
   } catch (error) {
     console.error('Error saving category:', error);

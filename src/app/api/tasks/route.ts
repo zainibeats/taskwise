@@ -18,9 +18,7 @@ export async function OPTIONS() {
 // GET /api/tasks - Get all tasks
 export async function GET(request: NextRequest) {
   try {
-    // Extract cookies from request and pass them to the service
-    const cookie = request.headers.get('cookie') || '';
-    const tasks = await taskService.getAllTasks(undefined, { cookie });
+    const tasks = await taskService.getAllTasks();
     return setCorsHeaders(NextResponse.json(tasks));
   } catch (error) {
     console.error('Error fetching tasks:', error);

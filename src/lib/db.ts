@@ -2,50 +2,14 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-// Determine if we're in development mode
-const isDevelopment = process.env.NODE_ENV === 'development';
-
 // Database connection singleton
 let dbInstance: Database.Database | null = null;
-
-// For development: fetch from the external database service
-async function fetchFromService(endpoint: string, options: RequestInit = {}) {
-  const baseUrl = process.env.DB_SERVICE_URL || 'http://localhost:3100';
-  const url = `${baseUrl}${endpoint}`;
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error communicating with database service');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Database service error:', error);
-    throw error;
-  }
-}
 
 /**
  * Get a singleton database connection
  * This ensures we reuse the same connection across all API requests
  */
 export function getDbConnection(): Database.Database {
-  if (isDevelopment) {
-    console.warn('Using direct SQLite connection in development mode is unreliable.');
-    console.warn('For reliable data persistence in development, use the database service:');
-    console.warn('1. Start the database service: node db/connection.js');
-    console.warn('2. In another terminal: npm run dev');
-  }
-  
   if (!dbInstance) {
     // Ensure the data directory exists
     const DB_DIR = path.join(process.cwd(), 'data');
@@ -220,50 +184,5 @@ if (typeof process !== 'undefined') {
   });
 }
 
-// Export the database service API for development mode
-export const dbService = {
-  // Tasks
-  getAllTasks: (headers?: { cookie?: string }) => fetchFromService('/api/tasks', {
-    headers: headers || {}
-  }),
-  getTaskById: (id: number) => fetchFromService(`/api/tasks/${id}`),
-  createTask: (task: any, userId?: number, headers?: { cookie?: string }) => fetchFromService('/api/tasks', {
-    method: 'POST',
-    body: JSON.stringify({ ...task, userId }),
-    headers: headers || {}
-  }),
-  updateTask: (id: number, updates: any) => fetchFromService(`/api/tasks/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(updates),
-  }),
-  deleteTask: (id: number) => fetchFromService(`/api/tasks/${id}`, {
-    method: 'DELETE',
-  }),
-  toggleTaskCompletion: (id: number) => fetchFromService(`/api/tasks/${id}`, {
-    method: 'PATCH',
-  }),
-  
-  // Categories
-  getAllCategories: (userId?: number, headers?: { cookie?: string }) => {
-    const endpoint = userId ? `/api/categories?userId=${userId}` : '/api/categories';
-    return fetchFromService(endpoint, {
-      headers: headers || {}
-    });
-  },
-  saveCategory: (category: any, headers?: { cookie?: string }) => fetchFromService('/api/categories', {
-    method: 'POST',
-    body: JSON.stringify(category),
-    headers: headers || {}
-  }),
-  deleteCategory: (name: string, userId?: number) => {
-    const endpoint = userId 
-      ? `/api/categories?name=${encodeURIComponent(name)}&userId=${userId}`
-      : `/api/categories?name=${encodeURIComponent(name)}`;
-    return fetchFromService(endpoint, {
-      method: 'DELETE',
-    });
-  },
-};
-
 // Export the singleton getter
-export default getDbConnection; 
+export default getDbConnection;
