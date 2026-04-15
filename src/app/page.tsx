@@ -10,7 +10,6 @@ import { useDatePicker } from "./hooks/useDatePicker";
 import {
   Card,
   CardContent,
-  CardHeader,
 } from "@/components/ui/card";
 import { prioritizeTask } from "@/ai/flows/prioritize-task";
 import { categorizeTask } from "@/ai/flows/categorize-task";
@@ -32,7 +31,7 @@ import { AppHeader } from "@/components/app-header";
 import { TaskCreator } from "@/components/task-creator";
 import { TaskCardList } from "@/components/task-card-list";
 
-import type { Task, Subtask } from "./types/task";
+import type { Task } from "./types/task";
 
 const defaultTasks: Task[] = [
   {
@@ -385,7 +384,7 @@ function TaskWiseApp() {
   // Date picker state and logic from custom hook
   // Handles selected date, clearing, and today check
   const {
-    selectedDate, setSelectedDate, handleClearDate, isToday
+    selectedDate, setSelectedDate
   } = useDatePicker(new Date());
 
   // Check for admin_required error parameter
@@ -600,10 +599,6 @@ function TaskWiseApp() {
           />
         </CardContent>
       </Card>
-      {/*
-        Discard Changes Modal
-        Confirms with the user before discarding edits to a task.
-{{ ... }} (rest of the code remains the same)
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -619,12 +614,6 @@ function TaskWiseApp() {
           <AlertDialogCancel onClick={cancelDiscard} className="category-clear-btn">Cancel</AlertDialogCancel>
         </AlertDialogContent>
       </AlertDialog>
-      {/*
-        Create Category Modal (shared, now the only source of truth)
-      */}
-      {/* The shared modal is now rendered inline with the dropdown and TaskEditForm. No duplicate modals. */}
-
-
     </div>
   );
 }
@@ -642,4 +631,3 @@ export default function Home() {
   );
 }
 
-// The TaskWiseApp component is already defined above
