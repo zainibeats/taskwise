@@ -27,7 +27,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { conditionalToast } from "@/lib/toast-utils"
-import { debugLog, debugError } from "@/lib/debug"
 import { UserSettingsApi } from "@/lib/api-client"
 
 /**
@@ -59,7 +58,7 @@ export function SettingsMenu() {
           setIsAdmin(data.user?.role === 'admin')
         }
       } catch (error) {
-        debugError('Error checking admin status:', error)
+        console.error('Error checking admin status:', error)
       }
     }
     
@@ -69,12 +68,9 @@ export function SettingsMenu() {
 
   // Save API key to database
   const saveApiKey = async () => {
-    debugLog("Attempting to save API key, length:", apiKey.length);
-    
     // Basic validation for Google AI API keys
     // This won't catch all invalid keys but helps prevent obvious errors
     if (apiKey && !apiKey.startsWith('AI')) {
-      debugLog("Warning: API key doesn't start with 'AI', which is unusual for Google AI API keys");
       toast({
         title: "Warning: Unusual API Key Format",
         description: "Google AI API keys typically start with 'AI'. Your key may not work correctly.",
@@ -83,7 +79,6 @@ export function SettingsMenu() {
     }
     
     if (apiKey && apiKey.length < 30) {
-      debugLog("Warning: API key is suspiciously short:", apiKey.length);
       toast({
         title: "Warning: Key Too Short",
         description: "Your API key seems too short. Google AI keys are typically longer.",
@@ -95,29 +90,12 @@ export function SettingsMenu() {
     
     if (success) {
       setIsDialogOpen(false);
-      debugLog("API key saved successfully to database");
       conditionalToast({
         title: "API Key Saved",
         description: "Your Google AI API key has been saved successfully to the database.",
       }, "settings_api_key_saved");
       
-      // Confirm the key was saved by retrieving it
-      setTimeout(async () => {
-        const savedKey = await UserSettingsApi.getSetting("googleAiApiKey");
-        if (savedKey && savedKey === apiKey) {
-          debugLog("API key verified in database");
-        } else {
-          debugError("API key verification failed - key in DB doesn't match or is missing");
-          debugLog("Original key length:", apiKey.length, "Saved key length:", savedKey?.length || 0);
-          toast({
-            title: "Warning",
-            description: "The API key may not have been saved correctly. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }, 1000);
     } else {
-      debugError("Failed to save API key to database");
       toast({
         title: "Error Saving API Key",
         description: "There was a problem saving your API key. Please try again.",

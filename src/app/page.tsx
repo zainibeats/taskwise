@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { conditionalToast } from "@/lib/toast-utils";
-import { debugLog, debugError } from "@/lib/debug";
 import "./clear-selection.css"; // Custom styles for category clear button
 import "./category-green.css"; // Custom styles for green hover/focus
 import { AppHeader } from "@/components/app-header";
@@ -102,7 +101,7 @@ function TaskWiseApp() {
           router.push('/login');
         }
       } catch (error) {
-        debugError('Error checking authentication:', error);
+        console.error('Error checking authentication:', error);
         // Assume not authenticated on error
         setIsAuthenticated(false);
         router.push('/login');
@@ -113,10 +112,6 @@ function TaskWiseApp() {
     
     checkAuth();
   }, [router]);
-  
-  // Debug logging for environment variables
-  debugLog("API URL from env:", process.env.NEXT_PUBLIC_API_URL);
-  debugLog("API Base URL:", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100');
   
   // List of built-in categories (cannot be deleted by user)
   const builtInCategories = [
@@ -148,16 +143,12 @@ function TaskWiseApp() {
         try {
           const defaultTaskDeletedSetting = await UserSettingsApi.getSetting('defaultTaskDeleted');
           defaultTaskDeleted = defaultTaskDeletedSetting === 'true';
-          debugLog("Default task deletion status:", defaultTaskDeleted ? "Deleted" : "Not deleted");
         } catch (settingsError) {
-          debugError("Error checking default task deletion setting:", settingsError);
           // If we can't check the setting, assume the default task wasn't deleted
         }
         
         // Then fetch tasks from API
-        debugLog("Fetching tasks from API...");
         const apiTasks = await TaskApi.getAllTasks();
-        debugLog("API tasks received:", apiTasks);
         
         if (apiTasks && apiTasks.length > 0) {
           // If there are API tasks, use them regardless of default task status
@@ -166,26 +157,21 @@ function TaskWiseApp() {
           conditionalToast({ title: "Tasks loaded from database" }, "load_tasks");
         } else {
           // No tasks from API, determine what to do
-          debugLog("No tasks from API, checking default task deletion status");
-          
           if (defaultTaskDeleted) {
             // If default task was deleted, start with empty task list
-            debugLog("Default task was previously deleted, starting with empty list");
             setHistory([[]]);
             setHistoryIndex(0);
           } else {
             // If default task wasn't deleted, use default tasks
-            debugLog("Using default tasks");
             setHistory([defaultTasks]);
             setHistoryIndex(0);
           }
         }
       } catch (error) {
-        debugError("Error loading tasks from API:", error);
-        
+        console.error("Error loading tasks from API:", error);
+
         // Even in error case, respect the default task deletion preference
         if (defaultTaskDeleted) {
-          debugLog("API error, but default task was previously deleted, starting with empty list");
           setHistory([[]]);
           setHistoryIndex(0);
           toast({ 
@@ -195,7 +181,6 @@ function TaskWiseApp() {
           });
         } else {
           // Use default tasks as fallback only if they weren't deleted
-          debugLog("Using default tasks due to API error");
           setHistory([defaultTasks]);
           setHistoryIndex(0);
           toast({ 
@@ -275,25 +260,16 @@ function TaskWiseApp() {
       // Only try to load categories if authenticated
       if (!isAuthenticated) return;
       
-      console.log('[PAGE] Initial category load started');
-      console.log('[PAGE] Built-in categories:', builtInCategories);
-      console.log('[PAGE] Initial category icons:', initialCategoryIcons);
-      
       // First, get the built-in category icons
       const categoryIconsToLoad = { ...initialCategoryIcons };
-      console.log('[PAGE] Default categories loaded:', categoryIconsToLoad);
 
       try {
         // Try to load categories from the database
-        console.log('[DEBUG] Fetching categories from API...');
         const apiCategories = await CategoryApi.getAllCategories();
-        
+
         if (apiCategories && Object.keys(apiCategories).length > 0) {
-          console.log('[DEBUG] Categories loaded from database:', apiCategories);
-          
           // Merge API categories with built-in ones (API categories take precedence)
           const mergedCategories = { ...categoryIconsToLoad, ...apiCategories };
-          console.log('[DEBUG] Merged categories:', mergedCategories);
           
           setLoadedCategoryIcons(mergedCategories);
           conditionalToast({ 
@@ -301,12 +277,10 @@ function TaskWiseApp() {
             description: `Loaded ${Object.keys(apiCategories).length} categories`
           }, "load_categories");
         } else {
-          console.log('[DEBUG] No categories from API, using default built-in categories');
           setLoadedCategoryIcons(categoryIconsToLoad);
         }
       } catch (error) {
-        console.error('[DEBUG] Error loading categories from API:', error);
-        console.log('[DEBUG] Using default built-in categories due to API error');
+        console.error('Error loading categories from API:', error);
         setLoadedCategoryIcons(categoryIconsToLoad);
         toast({ 
           title: "Error loading custom categories", 
@@ -334,18 +308,13 @@ function TaskWiseApp() {
   });
   // Removed customCategory and customCategoryEmoji state. Only use modal props now.
   
-  console.log('[PAGE] Category icons state after initialization:', categoryIconsState);
-  
   // Wrap category handlers to save to localStorage
   const handleCreateCategory = async (category: string, emoji: string) => {
-    console.log(`[DEBUG] Creating category: ${category} with emoji: ${emoji}`);
     
     // Save to database using API
     try {
       const success = await CategoryApi.saveCategory(category, emoji);
       if (success) {
-        console.log(`[DEBUG] Category "${category}" saved to database successfully`);
-        
         // Update UI state after successful API call
         const updatedIcons = { ...categoryIconsState, [category]: emoji };
         setCategoryIconsState(updatedIcons);
@@ -353,7 +322,6 @@ function TaskWiseApp() {
         
         conditionalToast({ title: "Custom category created", description: `${emoji} ${category}` }, "create_category");
       } else {
-        console.error(`[DEBUG] Failed to save category "${category}" to database`);
         toast({ 
           title: "Failed to create category", 
           description: "The operation couldn't be completed",
@@ -361,7 +329,7 @@ function TaskWiseApp() {
         });
       }
     } catch (error) {
-      console.error(`[DEBUG] Error saving category "${category}" to database:`, error);
+      console.error(`Error saving category "${category}":`, error);
       toast({ 
         title: "Error creating category", 
         description: "An unexpected error occurred",
@@ -371,15 +339,11 @@ function TaskWiseApp() {
   };
   
   const handleDeleteCategory = async (category: string) => {
-    console.log(`[PAGE] Deleting custom category: ${category}`);
-    
     // Delete from database using API
     try {
       const success = await CategoryApi.deleteCategory(category);
       if (success) {
         // Update the state only after successful API call
-        console.log(`[DEBUG] Category "${category}" deleted from database successfully`);
-        
         // Then update local state
         setCategoryIconsState(prevState => {
           const newState = { ...prevState };
@@ -402,7 +366,6 @@ function TaskWiseApp() {
         
         conditionalToast({ title: "Custom category deleted", description: category }, "delete_category");
       } else {
-        console.error(`[DEBUG] Failed to delete category "${category}" from database`);
         toast({ 
           title: "Failed to delete category", 
           description: "The operation couldn't be completed", 
@@ -410,7 +373,7 @@ function TaskWiseApp() {
         });
       }
     } catch (error) {
-      console.error(`[DEBUG] Error deleting category "${category}" from database:`, error);
+      console.error(`Error deleting category "${category}":`, error);
       toast({ 
         title: "Error deleting category", 
         description: "An unexpected error occurred", 
@@ -466,9 +429,7 @@ function TaskWiseApp() {
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
         userId = sessionData.user?.id;
-        console.log("Using user ID for AI operations:", userId);
       } else {
-        console.warn("Failed to get user session:", sessionResponse.status);
         toast({
           title: "Authentication issue",
           description: "Could not verify your identity. AI features may not work correctly.",
@@ -539,22 +500,17 @@ function TaskWiseApp() {
         completed: false,
       }));
 
-      console.log("[DEBUG] Attempting to create task in database:", newTask);
-      
       // Save task to database using API
       try {
         const createdTask = await TaskApi.createTask(newTask);
         if (createdTask) {
-          console.log("[DEBUG] Task created in database:", createdTask);
           // Use the returned task with database ID
           pushHistory([...tasks, createdTask]);
         } else {
-          console.error("[DEBUG] Failed to create task in database, falling back to local only");
           // Fallback to local state only
           pushHistory([...tasks, newTask]);
         }
       } catch (apiError) {
-        console.error("[DEBUG] API error creating task:", apiError);
         // Fallback to local state only if API fails
         pushHistory([...tasks, newTask]);
         
