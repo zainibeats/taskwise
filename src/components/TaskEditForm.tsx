@@ -12,20 +12,11 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Icons } from "@/components/icons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Task } from "@/app/types/task";
 
 interface TaskEditFormProps {
-  task: any;
-  onUpdate: (updatedTask: Partial<any>) => void;
+  task: Task;
+  onUpdate: (updatedTask: Partial<Task>) => void;
   onCancel: () => void;
   categoryIcons: { [key: string]: string };
   setCategoryIcons: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
@@ -33,36 +24,6 @@ interface TaskEditFormProps {
   setIsCreateCategoryOpen: (open: boolean) => void;
   onCreateCategory: (category: string, emoji: string) => void;
 }
-
-interface EmojiPickerProps {
-  onEmojiSelect: (emoji: string) => void;
-  onClose: () => void;
-}
-
-const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => {
-  const emojis = ["💼", "📞", "💹", "🛠️", "✏️", "👨‍👩‍👧‍👦", "✈️", "🏖️", "🪴", "🍽️", "❤️", "📚", "🎞️", "⭐", "🌐", "🎉", "🐶", "🐱", "🧸", "⚽", "⚕️", "🏠", "💊", "📧", "💰"];
-
-  return (
-    <div className="absolute z-10 bg-white shadow-md rounded-md p-2 w-64">
-       <ScrollArea className="h-[200px] w-full rounded-md border">
-          <div className="grid grid-cols-5 gap-2">
-            {emojis.map((emoji) => (
-              <button
-                key={emoji}
-                className="text-2xl hover:bg-[rgba(139,233,253,0.1)] hover:text-[#8be9fd] rounded-md transition-colors"
-                onClick={() => onEmojiSelect(emoji)}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-      </ScrollArea>
-      <Button variant="ghost" className="w-full mt-2 category-green-btn" onClick={onClose}>
-        Close
-      </Button>
-    </div>
-  );
-};
 
 /**
  * TaskEditForm component allows editing of a task's details, including title, description,
@@ -89,13 +50,6 @@ export function TaskEditForm({ task, onUpdate, onCancel, categoryIcons, setCateg
       subtasks,
     });
   };
-
-
-    // Handle emoji selection for new category
-  const handleEmojiSelect = (emoji: string) => {
-      setCustomCategoryEmoji(emoji);
-      setIsEmojiPickerOpen(false); // Close the picker after selection
-    };
 
   // Handle category dropdown selection (including new category option)
 const handleCategorySelect = (value: string | undefined) => {
@@ -263,18 +217,3 @@ const handleCategorySelect = (value: string | undefined) => {
     </div>
   );
 }
-interface AlertDialogFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const AlertDialogFooter = ({
-                               className,
-                               ...props
-                             }: AlertDialogFooterProps) => (
-  <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
-    )}
-    {...props}
-  />
-)
-AlertDialogFooter.displayName = "AlertDialogFooter"
