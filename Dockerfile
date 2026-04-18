@@ -27,11 +27,11 @@ RUN mkdir -p /app/data /app/logs && \
 # Build the application
 RUN npm run build
 
-# Expose ports
-EXPOSE 9002 3100
+# Expose port
+EXPOSE 9002
 
 # Create volume for data persistence
 VOLUME ["/app/data", "/app/logs"]
 
-# Start both the database service and the Next.js application
-CMD ["npm", "run", "start:with-db"] 
+# Start the Next.js application
+CMD ["npm", "run", "start"]
