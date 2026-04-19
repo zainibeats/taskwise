@@ -92,10 +92,11 @@ async function generateWithAnthropic(prompt: string, apiKey: string): Promise<st
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
     model: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-latest',
-    max_tokens: 1024,
+    max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],
   });
   const block = response.content[0];
   if (!block) throw new Error('Anthropic returned empty content array');
-  return block.type === 'text' ? block.text : '';
+  if (block.type !== 'text') throw new Error(`Unexpected Anthropic content block type: ${block.type}`);
+  return block.text;
 }
