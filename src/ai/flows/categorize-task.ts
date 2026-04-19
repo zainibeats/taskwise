@@ -1,140 +1,61 @@
 'use server';
 
-/**
- * @fileOverview A task categorization AI agent.
- *
- * - categorizeTask - A function that handles the task categorization process.
- * - CategorizeTaskInput - The input type for the categorizeTask function.
- * - CategorizeTaskOutput - The return type for the categorizeTask function.
- */
-
-import { getServerAI } from '@/ai/server-ai-instance';
-import { z } from 'genkit';
+import { z } from 'zod';
+import { generateText, extractJSON } from '@/ai/providers';
 
 const CategorizeTaskInputSchema = z.object({
-  taskDescription: z.string().describe('The task description to be categorized.'),
-  categories: z.array(z.string()).optional().describe('A list of categories to choose from.'),
-  categoriesString: z.string().optional().describe('A comma-separated list of categories to choose from.'),
-  userId: z.number().optional().describe('The user ID to get the API key for.'),
+  taskDescription: z.string(),
+  categories: z.array(z.string()).optional(),
+  categoriesString: z.string().optional(),
+  userId: z.number().optional(),
 });
 export type CategorizeTaskInput = z.infer<typeof CategorizeTaskInputSchema>;
 
 const CategorizeTaskOutputSchema = z.object({
-  category: z.string().describe('The category that best fits the task.'),
+  category: z.string(),
 });
 export type CategorizeTaskOutput = z.infer<typeof CategorizeTaskOutputSchema>;
 
-/**
- * Categorizes a task using AI.
- * If AI is unavailable, uses keyword matching as a fallback.
- */
 export async function categorizeTask(input: CategorizeTaskInput): Promise<CategorizeTaskOutput> {
   try {
-    // Log that we're trying to categorize with a specific user ID
-    console.log(`Attempting to categorize task with user ID: ${input.userId || 'none'}`);
-    
-    // Check if taskDescription is provided
     if (!input.taskDescription || input.taskDescription.trim() === '') {
-      console.warn('Task description is empty, cannot categorize');
       return { category: 'Other' };
     }
-    
-    // Get the current AI instance with the latest API key
-    const ai = await getServerAI(input.userId);
-    
-    // Join categories array into a string if present
-    const categoriesString = input.categories ? input.categories.join(", ") : undefined;
-    
-    // Define the flow and prompt inside the function to use the current AI instance
-    const prompt = ai.definePrompt({
-      name: 'categorizeTaskPrompt',
-      input: {
-        schema: z.object({
-          taskDescription: z.string().describe('The task description to be categorized.'),
-          categoriesString: z.string().optional().describe('A comma-separated list of categories to choose from.'),
-        }),
-      },
-      output: {
-        schema: z.object({
-          category: z.string().describe('The category that best fits the task from the predefined list.'),
-        }),
-      },
-      prompt: `You are a task categorization expert. Given the task description, determine the most appropriate category for it from the following list:
-{{#if categoriesString}}
-  {{categoriesString}}
-{{else}}
-  Health, Finance, Work, Personal, Errands, Other
-{{/if}}
 
-Task Description: {{{taskDescription}}}
+    const defaultCategories = ['Health', 'Finance', 'Work', 'Personal', 'Errands', 'Other'];
+    const categories = input.categories?.join(', ') ?? defaultCategories.join(', ');
 
-Category: `,
-    });
+    const prompt = `You are a task categorization expert. Categorize the following task into exactly one of these categories: ${categories}.
 
-    const categorizeTaskFlow = ai.defineFlow<
-      typeof CategorizeTaskInputSchema,
-      typeof CategorizeTaskOutputSchema
-    >(
-      {
-        name: 'categorizeTaskFlow',
-        inputSchema: CategorizeTaskInputSchema,
-        outputSchema: CategorizeTaskOutputSchema,
-      },
-      async input => {
-        const {output} = await prompt(input);
-        return output!;
-      }
-    );
-    
-    // Run the flow with the input
-    return await categorizeTaskFlow({ ...input, categoriesString });
+Task: ${input.taskDescription}
+
+Return ONLY valid JSON with no explanation: {"category": "CategoryName"}`;
+
+    const raw = await generateText(prompt, input.userId);
+    const parsed = extractJSON(raw) as { category: string };
+    return { category: parsed.category };
   } catch (error) {
-    console.error("Error in categorizeTask:", error);
-    
-    // Provide more specific error messages based on error type
-    if (error instanceof Error) {
-      if (error.message.includes("API_KEY_INVALID")) {
-        console.error("API key is invalid. Please check your API key in settings.");
-      } else if (error.message.includes("No valid API key available")) {
-        console.error("No valid API key available. Please add one in settings.");
-      } else if (error.message.includes("PERMISSION_DENIED")) {
-        console.error("API key doesn't have permission to use this service.");
-      } else if (error.message.includes("QUOTA_EXCEEDED")) {
-        console.error("API quota limit exceeded.");
-      }
-    }
-    
-    // Use keyword matching as a fallback
-    const defaultCategories = ["Health", "Finance", "Work", "Personal", "Errands", "Other"];
-    const availableCategories = input.categories || defaultCategories;
-    
-    // Simple keyword matching for categories
+    console.error('Error in categorizeTask:', error);
+
+    const defaultCategories = ['Health', 'Finance', 'Work', 'Personal', 'Errands', 'Other'];
+    const availableCategories = input.categories ?? defaultCategories;
     const task = input.taskDescription.toLowerCase();
+
     const keywordMap: Record<string, string[]> = {
-      'health': ['health', 'doctor', 'medical', 'medicine', 'exercise', 'workout', 'gym', 'fitness', 'diet'],
-      'finance': ['finance', 'money', 'bank', 'pay', 'bill', 'budget', 'tax', 'invest', 'loan'],
-      'work': ['work', 'job', 'office', 'project', 'meeting', 'email', 'presentation', 'client', 'deadline', 'report'],
-      'personal': ['personal', 'home', 'family', 'friend', 'hobby', 'read', 'learn', 'study', 'relax'],
-      'errands': ['errand', 'shop', 'store', 'buy', 'pick up', 'groceries', 'mail', 'laundry', 'clean']
+      health: ['health', 'doctor', 'medical', 'medicine', 'exercise', 'workout', 'gym', 'fitness', 'diet'],
+      finance: ['finance', 'money', 'bank', 'pay', 'bill', 'budget', 'tax', 'invest', 'loan'],
+      work: ['work', 'job', 'office', 'project', 'meeting', 'email', 'presentation', 'client', 'deadline', 'report'],
+      personal: ['personal', 'home', 'family', 'friend', 'hobby', 'read', 'learn', 'study', 'relax'],
+      errands: ['errand', 'shop', 'store', 'buy', 'pick up', 'groceries', 'mail', 'laundry', 'clean'],
     };
-    
-    // Find matching category by keywords
+
     for (const category of availableCategories) {
-      const lowercaseCategory = category.toLowerCase();
-      
-      // Direct match with task description
-      if (task.includes(lowercaseCategory)) {
-        return { category };
-      }
-      
-      // Check keywords for this category
-      const keywords = keywordMap[lowercaseCategory] || [];
-      if (keywords.some(keyword => task.includes(keyword))) {
-        return { category };
-      }
+      const lc = category.toLowerCase();
+      if (task.includes(lc)) return { category };
+      const keywords = keywordMap[lc] ?? [];
+      if (keywords.some(kw => task.includes(kw))) return { category };
     }
-    
-    // If no match found, return "Other" or the first available category
-    return { category: availableCategories.includes("Other") ? "Other" : availableCategories[0] };
+
+    return { category: availableCategories.includes('Other') ? 'Other' : availableCategories[0] };
   }
 }
