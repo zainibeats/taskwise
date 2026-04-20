@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, Suspense, useEffect } from "react";
-import { useSearchParams } from 'next/navigation';
 import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
@@ -66,8 +65,6 @@ const initialCategoryIcons: { [key: string]: string } = {
 
 // Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
 function TaskWiseApp() {
-  const searchParams = useSearchParams();
-
   // List of built-in categories (cannot be deleted by user)
   const builtInCategories = [
     "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
@@ -334,18 +331,6 @@ function TaskWiseApp() {
   const {
     selectedDate, setSelectedDate
   } = useDatePicker(new Date());
-
-  // Check for admin_required error parameter
-  useEffect(() => {
-    const error = searchParams?.get('error');
-    if (error === 'admin_required') {
-      toast({
-        title: 'Access Denied',
-        description: 'You need admin privileges to access the admin dashboard.',
-        variant: 'destructive',
-      });
-    }
-  }, [searchParams, toast]);
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;

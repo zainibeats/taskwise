@@ -13,7 +13,7 @@ const getDb = () => getDbConnection();
 // Task operations
 export const taskService = {
   // Get all tasks
-  getAllTasks: async (userId?: number): Promise<DbTask[]> => {
+  getAllTasks: async (): Promise<DbTask[]> => {
     const db = getDb();
     const tasks = db.prepare('SELECT * FROM tasks ORDER BY priority_score DESC').all() as DbTask[];
 
