@@ -1,72 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByUsername, setUserPassword, userNeedsPasswordSetup } from '@/lib/user-config';
-import { createSession } from '@/lib/session';
+import bcrypt from 'bcrypt';
+import getDbConnection from '@/lib/db';
+import { deleteAllSessions, createSession } from '@/lib/session';
+
+const SESSION_COOKIE_NAME = 'taskwise_session';
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse request body
-    const { username, password } = await req.json();
-    
-    if (!username || !password) {
-      return NextResponse.json(
-        { error: 'Username and password are required' },
-        { status: 400 }
-      );
+    const { password, currentPassword } = await req.json();
+
+    if (!password || password.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
-    
-    // Check if user exists and needs password setup
-    const needsSetup = userNeedsPasswordSetup(username);
-    
-    if (!needsSetup) {
-      return NextResponse.json(
-        { error: 'User already has a password set or does not exist' },
-        { status: 400 }
-      );
+
+    const db = getDbConnection();
+    const config = db.prepare('SELECT password_hash FROM app_config WHERE id = 1').get() as { password_hash: string | null } | null;
+
+    // If a password already exists, require the current password to change it
+    if (config?.password_hash) {
+      if (!currentPassword) {
+        return NextResponse.json({ error: 'Current password is required to change password' }, { status: 400 });
+      }
+      const match = await bcrypt.compare(currentPassword, config.password_hash);
+      if (!match) {
+        return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 });
+      }
     }
-    
-    // Set password
-    const success = await setUserPassword(username, password);
-    
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to set password' },
-        { status: 500 }
-      );
-    }
-    
-    // Get user for session
-    const user = getUserByUsername(username);
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Create session
-    const sessionId = createSession(user);
-    
-    // Set cookie expiration (24 hours)
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    
-    // Create the response
-    const response = NextResponse.json(
-      { 
-        success: true,
-        sessionId, // Include sessionId in the response 
-        user: {
-          username: user.username,
-          email: user.email,
-          role: user.role,
-        }
-      },
-      { status: 200 }
-    );
-    
-    // Set the session cookie directly in the response
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    db.prepare('UPDATE app_config SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1').run(passwordHash);
+
+    // Invalidate all existing sessions after password change
+    deleteAllSessions();
+
+    // Create a fresh session for the current user
+    const sessionId = createSession();
+    const expires = new Date(Date.now() + SESSION_EXPIRY_MS);
+
+    const response = NextResponse.json({ success: true }, { status: 200 });
     response.cookies.set({
-      name: 'taskwise_session',
+      name: SESSION_COOKIE_NAME,
       value: sessionId,
       expires,
       path: '/',
@@ -74,13 +48,10 @@ export async function POST(req: NextRequest) {
       secure: false,
       sameSite: 'lax',
     });
-    
+
     return response;
   } catch (error) {
     console.error('Set password error:', error);
-    return NextResponse.json(
-      { error: 'An error occurred while setting password' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'An error occurred while setting password' }, { status: 500 });
   }
-} 
+}
