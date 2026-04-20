@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { TaskApi, CategoryApi, UserSettingsApi } from "@/lib/api-client";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useTaskActions } from "./hooks/useTaskActions";
@@ -66,52 +66,8 @@ const initialCategoryIcons: { [key: string]: string } = {
 
 // Main application component for TaskWise. Handles task state, UI, and orchestrates all hooks.
 function TaskWiseApp() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-  
-  // Check authentication status first
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Check if setup is required
-        const setupResponse = await fetch('/api/auth/setup-required', {
-          credentials: 'include', // Include cookies for authenticated requests
-        });
-        if (setupResponse.ok) {
-          const setupData = await setupResponse.json();
-          if (setupData.setupRequired) {
-            router.push('/setup');
-            return;
-          }
-        }
-        
-        // Check for session
-        const sessionResponse = await fetch('/api/auth/session', {
-          credentials: 'include', // Include cookies for authenticated requests
-        });
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          setIsAuthenticated(!!sessionData.user);
-        } else {
-          // No valid session, redirect to login
-          router.push('/login');
-        }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-        // Assume not authenticated on error
-        setIsAuthenticated(false);
-        router.push('/login');
-      } finally {
-        setIsAuthChecking(false);
-      }
-    };
-    
-    checkAuth();
-  }, [router]);
-  
+
   // List of built-in categories (cannot be deleted by user)
   const builtInCategories = [
     "Work", "Home", "Errands", "Personal", "Health", "Finance", "Education", "Social", "Travel", "Other"
@@ -128,12 +84,8 @@ function TaskWiseApp() {
   const [isLoading, setIsLoading] = useState(true); // Add loading state to handle initialization period
   const { toast } = useToast();
   
-  // Modify the loadTasks useEffect to only run when authenticated
   useEffect(() => {
     async function loadTasks() {
-      // Only try to load tasks if authenticated
-      if (!isAuthenticated) return;
-      
       // Initialize default task deletion status flag outside try block for proper scope
       let defaultTaskDeleted = false;
       
@@ -194,7 +146,7 @@ function TaskWiseApp() {
     }
     
     loadTasks();
-  }, [isAuthenticated]); // Add isAuthenticated to dependency array
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Custom undo/redo hook for tasks
   // Provides tasks, canUndo/canRedo, and history manipulation functions
@@ -253,12 +205,8 @@ function TaskWiseApp() {
   // Load stored category icons
   const [loadedCategoryIcons, setLoadedCategoryIcons] = useState(initialCategoryIcons);
   
-  // Modify the loadCategories useEffect to only run when authenticated
   useEffect(() => {
     async function loadCategories() {
-      // Only try to load categories if authenticated
-      if (!isAuthenticated) return;
-      
       // First, get the built-in category icons
       const categoryIconsToLoad = { ...initialCategoryIcons };
 
@@ -290,7 +238,7 @@ function TaskWiseApp() {
     }
     
     loadCategories();
-  }, [isAuthenticated]); // Add isAuthenticated to dependency array
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const {
@@ -538,16 +486,6 @@ function TaskWiseApp() {
     }
   };
 
-
-  // Add a loading state for the entire page
-  if (isAuthChecking) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">Checking authentication...</span>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto p-4">
