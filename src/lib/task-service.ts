@@ -36,7 +36,7 @@ export const taskService = {
   },
 
   // Create a new task
-  createTask: async (task: Omit<DbTask, 'id'>, userId?: number): Promise<DbTask> => {
+  createTask: async (task: Omit<DbTask, 'id'>): Promise<DbTask> => {
     const db = getDb();
     const { title, description, deadline, importance, category, priority_score, is_completed = false, subtasks = [] } = task;
     
@@ -46,10 +46,9 @@ export const taskService = {
     
     if (!taskCategory && title) {
       try {
-        console.log(`Attempting to categorize task '${title}' with user ID: ${userId || 'none'}`);
-        const result = await categorizeTask({ 
-          taskDescription: title + (description ? ` - ${description}` : ''),
-          userId 
+        console.log(`Attempting to categorize task '${title}'`);
+        const result = await categorizeTask({
+          taskDescription: title + (description ? ` - ${description}` : '')
         });
         taskCategory = result.category;
       } catch (error) {
@@ -61,13 +60,12 @@ export const taskService = {
     // If no priority score is provided, calculate it using AI
     if (!taskPriorityScore && title) {
       try {
-        console.log(`Attempting to prioritize task '${title}' with user ID: ${userId || 'none'}`);
+        console.log(`Attempting to prioritize task '${title}'`);
         const result = await prioritizeTask({
           task: title,
           deadline: deadline || '',
           importance: importance || 5,
-          category: taskCategory || 'Other',
-          userId
+          category: taskCategory || 'Other'
         });
         taskPriorityScore = result.priorityScore;
         console.log(`Successfully prioritized task with score: ${taskPriorityScore}`);
@@ -84,21 +82,20 @@ export const taskService = {
       }
     }
     
-    // Insert the task with user ID
+    // Insert the task
     const result = db.prepare(`
-      INSERT INTO tasks (title, description, deadline, importance, category, priority_score, is_completed, user_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(title, description, deadline, importance, taskCategory, taskPriorityScore, is_completed ? 1 : 0, userId || null);
+      INSERT INTO tasks (title, description, deadline, importance, category, priority_score, is_completed)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(title, description, deadline, importance, taskCategory, taskPriorityScore, is_completed ? 1 : 0);
     
     const taskId = result.lastInsertRowid as number;
     
     // If no subtasks are provided and we have a title, try to generate them
     if (subtasks.length === 0 && title) {
       try {
-        console.log(`Attempting to suggest subtasks for task '${title}' with user ID: ${userId || 'none'}`);
+        console.log(`Attempting to suggest subtasks for task '${title}'`);
         const result = await suggestSubtasks({
-          taskDescription: title + (description ? ` - ${description}` : ''),
-          userId
+          taskDescription: title + (description ? ` - ${description}` : '')
         });
         
         if (result.subtasks && result.subtasks.length > 0) {
@@ -226,50 +223,28 @@ export const taskService = {
 // Category operations
 export const categoryService = {
   // Get all categories with icons
-  getAllCategories: async (userId?: number): Promise<DbCategory[]> => {
+  getAllCategories: async (): Promise<DbCategory[]> => {
     const db = getDb();
-    if (userId) {
-      return db.prepare('SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL').all(userId) as DbCategory[];
-    } else {
-      return db.prepare('SELECT * FROM categories').all() as DbCategory[];
-    }
+    return db.prepare('SELECT * FROM categories').all() as DbCategory[];
   },
 
   // Create or update a category
   saveCategory: async (category: DbCategory): Promise<DbCategory> => {
     const db = getDb();
-    const { name, icon, user_id } = category;
-    
-    // Check if a category with this name already exists for this user
-    const existing = db.prepare('SELECT * FROM categories WHERE name = ? AND (user_id = ? OR user_id IS NULL)').get(name, user_id) as { user_id: number | null } | undefined;
-    
+    const { name, icon } = category;
+    const existing = db.prepare('SELECT id FROM categories WHERE name = ?').get(name);
     if (existing) {
-      // If it's a built-in category (user_id is NULL), create a user-specific override
-      if (existing.user_id === null) {
-        db.prepare('INSERT INTO categories (name, icon, user_id) VALUES (?, ?, ?)').run(name, icon, user_id);
-      } else {
-        // Otherwise, update the existing user-specific category
-        db.prepare('UPDATE categories SET icon = ? WHERE name = ? AND user_id = ?').run(icon, name, user_id);
-      }
+      db.prepare('UPDATE categories SET icon = ? WHERE name = ?').run(icon, name);
     } else {
-      // Create a new user-specific category
-      db.prepare('INSERT INTO categories (name, icon, user_id) VALUES (?, ?, ?)').run(name, icon, user_id);
+      db.prepare('INSERT INTO categories (name, icon) VALUES (?, ?)').run(name, icon);
     }
-    
     return category;
   },
 
   // Delete a category
-  deleteCategory: async (name: string, userId?: number): Promise<boolean> => {
+  deleteCategory: async (name: string): Promise<boolean> => {
     const db = getDb();
-    
-    // Only allow deleting user-specific categories, not built-in ones
-    if (userId) {
-      const result = db.prepare('DELETE FROM categories WHERE name = ? AND user_id = ?').run(name, userId);
-      return result.changes > 0;
-    } else {
-      const result = db.prepare('DELETE FROM categories WHERE name = ?').run(name);
-      return result.changes > 0; 
-    }
+    const result = db.prepare('DELETE FROM categories WHERE name = ?').run(name);
+    return result.changes > 0;
   }
 }; 
