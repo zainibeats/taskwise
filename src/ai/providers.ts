@@ -29,7 +29,7 @@ export async function generateText(prompt: string, userId?: number): Promise<str
 
   switch (provider) {
     case 'google_ai':
-      return generateWithGoogleAI(prompt, userId);
+      return generateWithGoogleAI(prompt);
 
     case 'lm_studio':
       return generateWithOpenAICompat(prompt, {
@@ -68,8 +68,8 @@ export async function generateText(prompt: string, userId?: number): Promise<str
   }
 }
 
-async function generateWithGoogleAI(prompt: string, userId?: number): Promise<string> {
-  const ai = await getServerAI(userId);
+async function generateWithGoogleAI(prompt: string): Promise<string> {
+  const ai = await getServerAI();
   const response = await ai.generate(prompt);
   return response.text;
 }
