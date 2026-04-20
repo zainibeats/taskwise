@@ -2,7 +2,7 @@
 
 > **Note**: This project contains AI-generated code.
 
-TaskWise is an intelligent to-do list application that uses AI to help you manage your tasks more effectively. The application prioritizes your tasks, suggests subtasks, and categorizes items automatically to streamline your productivity workflow.
+TaskWise is a minimal, single-user to-do list application that uses AI to help you manage tasks more effectively. It prioritizes tasks, suggests subtasks, and categorizes items automatically — with no account setup required.
 
 ## ✨ Features
 
@@ -10,13 +10,14 @@ TaskWise is an intelligent to-do list application that uses AI to help you manag
 - **Smart Categorization**: Automatically categorizes tasks based on content
 - **Subtask Suggestions**: AI generates relevant subtasks to help break down complex tasks
 - **Task Management**: Create, edit, complete, and delete tasks with an intuitive interface
+- **Custom Categories**: Add and customize your own task categories
+- **Optional Password Protection**: Secure the app with a single password if self-hosting
 - **Cross-Device Sync**: Access your tasks from any device by connecting to your self-hosted server
-- **User Management**: Admin interface for creating and managing user accounts
 
 ## 🛠️ Technology Stack
 
 - [Next.js](https://nextjs.org/) - React framework for building the UI
-- [Genkit](https://genkit.ai/) with [Google Gemini API](https://ai.google.dev/gemini-api) - AI framework for task prioritization and subtask generation
+- [Genkit](https://genkit.ai/) with [Google Gemini API](https://ai.google.dev/gemini-api) - AI framework (one of several supported providers)
 - [Shadcn UI](https://ui.shadcn.com/) - Component library for the user interface
 - [date-fns](https://date-fns.org/) - Date manipulation library
 - [SQLite](https://www.sqlite.org/) - Lightweight database for task storage
@@ -25,7 +26,7 @@ TaskWise is an intelligent to-do list application that uses AI to help you manag
 
 ### Prerequisites
 
-- Node.js v16 or newer (Node.js 18 or 20 recommended for Docker deployments)
+- Node.js v18 or newer
 - npm or yarn package manager
 
 ### Installation
@@ -39,169 +40,157 @@ TaskWise is an intelligent to-do list application that uses AI to help you manag
 2. Install dependencies:
    ```bash
    npm install
-   # or
-   yarn install
    ```
 
 3. Create a `.env.local` file with your configuration:
-   ```
-   # Required
+   ```env
+   # AI provider — see "AI Providers" section below
+   AI_PROVIDER=google_ai
    GOOGLE_AI_API_KEY=your_google_ai_api_key_here
-   
-   # Optional - defaults shown below
+
+   # Optional
    NODE_ENV=development
    PORT=9002
-   DB_SERVER_PORT=3100
-   NEXT_PUBLIC_API_URL=http://localhost:3100
    ```
-   (You can obtain a Google AI API key from [Google AI Studio](https://aistudio.google.com/app/apikey) - they offer a free tier with 60 queries per minute)
 
-4. Run the development server with database support:
+4. Run the development server:
    ```bash
-   # Run both database service and Next.js in one command
-   npm run dev:with-db
-   
-   # Or run them separately
-   npm run db:start   # In one terminal
-   npm run dev        # In another terminal
+   npm run dev
    ```
 
-5. For production use after building the app:
-   ```bash
-   # Build the application
-   npm run build
-   
-   # Run both database service and production Next.js in one command
-   npm run start:with-db
-   
-   # Or run them separately
-   npm run db:start   # In one terminal
-   npm start          # In another terminal
-   ```
+5. Open [http://localhost:9002](http://localhost:9002) — the app loads directly, no login required.
 
-6. Open [http://localhost:9002](http://localhost:9002) in your browser to see the application.
+## 🔒 Optional Password Protection
 
-## 🔒 User Authentication
-
-TaskWise now includes a user authentication system with role-based access control:
-
-- Supports multiple user accounts with admin and user roles
-- Admin users can create and manage other users
-- Each user has their own separate tasks and categories
-- Secure password storage using bcrypt hashing
-- Session-based authentication with cookie storage
-
-### Setting Up Admin Users
-
-#### For Development
-
-To create an initial admin user in development:
+By default the app is open access — useful for local use. To add a password:
 
 ```bash
-# Run the admin creation script
-npm run create-admin
+curl -X POST http://localhost:9002/api/auth/set-password \
+  -H "Content-Type: application/json" \
+  -d '{"password":"yourpassword"}'
 ```
 
-Follow the prompts to enter a username, email, and password.
-
-#### For Docker/Self-Hosting
-
-When using Docker for self-hosting, create an admin user with:
+Once set, visiting the app will redirect to a login page. To change the password, provide the current one:
 
 ```bash
-# After starting the container
-docker-compose exec taskwise npm run create-admin
+curl -X POST http://localhost:9002/api/auth/set-password \
+  -H "Content-Type: application/json" \
+  -d '{"password":"newpassword","currentPassword":"oldpassword"}'
 ```
 
-### User Management
+Password is stored as a bcrypt hash in the local SQLite database. Sessions expire after 24 hours.
 
-Once you have an admin account:
+## 🧠 AI Providers
 
-1. Log in to TaskWise using the admin credentials
-2. Navigate to `/admin` to access the admin dashboard
-3. Use the dashboard to create, edit, or deactivate user accounts
+Set `AI_PROVIDER` in your `.env.local` to choose a provider. Defaults to `google_ai`.
 
-## 🔒 Data Storage Approach
+### Google AI (default)
 
-TaskWise uses SQLite for task persistence, which means:
+Free tier available — 60 requests/minute.
 
-- **Self-Hosted**: All your task data remains on your server, not in the browser
-- **Cross-Device Sync**: Access your tasks from any device by connecting to your self-hosted instance
-- **Data Persistence**: Your data is safely stored in a SQLite database file on your server
-- **Simple Setup**: No complex database configuration required - SQLite works out of the box
-- **Server-Side Only**: All data is stored exclusively in the database, with no browser storage used
+```env
+AI_PROVIDER=google_ai
+GOOGLE_AI_API_KEY=your_key_here
+```
 
-The SQLite database is stored in the `data/taskwise.db` file in your project directory.
+Get a key at [Google AI Studio](https://aistudio.google.com/app/apikey).
 
-## 🏠 Self-Hosting Guide
+### OpenAI
 
-TaskWise can be self-hosted on your own server. For detailed instructions, see the [comprehensive self-hosting guide](docs/self-hosting-guide.md) which covers:
+```env
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini   # optional, defaults to gpt-4o-mini
+```
 
-- Docker Compose setup (recommended)
-- Direct Docker deployment
-- Cross-device database access configuration
-- Troubleshooting common issues
-- Domain name setup
-- Security considerations
-- Data backup strategies
+### Anthropic
 
-### Docker Deployment
+```env
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_MODEL=claude-3-5-haiku-latest   # optional
+```
 
-The easiest way to deploy TaskWise is using Docker Compose:
+### LM Studio (local, free)
+
+Run LM Studio, load a model, and start the local server (default port 1234).
+
+```env
+AI_PROVIDER=lm_studio
+LM_STUDIO_BASE_URL=http://localhost:1234/v1
+LOCAL_LLM_MODEL=your-loaded-model-name
+```
+
+### Ollama (local, free)
+
+Install [Ollama](https://ollama.ai) and pull a model: `ollama pull llama3.2`
+
+```env
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434/v1
+LOCAL_LLM_MODEL=llama3.2
+```
+
+> AI features are optional — the app works fully without an API key, AI calls will simply fail silently and tasks will have no auto-categorization or priority scores.
+
+## 🏠 Self-Hosting
+
+### Docker (recommended)
 
 ```bash
-# Clone the repository
 git clone https://github.com/zainibeats/taskwise
 cd taskwise
 
-# Create .env file with your Google AI API key
+# Create .env with your AI key
 echo "GOOGLE_AI_API_KEY=your_key_here" > .env
 
-# Edit docker-compose.yml to set your server's IP address
-# Replace "localhost" with your actual IP or hostname in NEXT_PUBLIC_API_URL
+# Edit docker-compose.yml if deploying to a remote server:
+# set NEXT_PUBLIC_API_URL to your server's IP or hostname
 
-# Start the containers
 docker-compose up -d
 ```
 
-#### Docker Troubleshooting
+For a detailed self-hosting guide (Docker Compose, cross-device access, backups, domain setup), see [docs/self-hosting-guide.md](docs/self-hosting-guide.md).
 
-If you encounter build issues:
+**Docker troubleshooting:**
+- Allocate at least 2 GB of memory to Docker
+- For native module errors, try rebuilding: `docker-compose build --no-cache taskwise`
+- On Windows, use the PowerShell setup script: `.\scripts\setup-taskwise.ps1`
 
-1. Make sure your Docker has at least 2GB of memory allocated
-2. If you encounter native module errors with Node.js 20, try using Node.js 18 by changing the first line in Dockerfile
-3. For cross-platform deployment issues with bcrypt or SQLite, try rebuilding with:
-   ```bash
-   docker-compose build --no-cache taskwise
-   ```
-
-To quickly set up TaskWise on Windows, you can use our PowerShell setup script:
-
-```powershell
-# Run as Administrator in PowerShell
-.\scripts\setup-taskwise.ps1
-```
-
-The most important thing to remember when self-hosting is to configure the `NEXT_PUBLIC_API_URL` with your server's actual IP address or hostname to ensure cross-device database access works properly.
-
-## 🧠 AI Features Explained
+## 📊 AI Features Explained
 
 ### Task Prioritization
 
-Tasks are prioritized based on:
+Priority scores are calculated from:
 - Deadline proximity
-- Task category. The AI considers the category context when evaluating the urgency implied by the deadline, aiming for a balanced priority score even for near-term tasks.
+- Task importance (1–10)
+- Category urgency multiplier:
 
-### Category-Specific Urgency Ratios
+| Category | Multiplier |
+|----------|-----------|
+| Health   | 1.5 |
+| Finance  | 1.3 |
+| Work     | 1.2 |
+| Personal | 1.0 |
+| Errands  | 0.9 |
+| Other    | 0.8 |
 
-Different task categories have different urgency multipliers:
-- Health: 1.5
-- Finance: 1.3
-- Work: 1.2
-- Personal: 1.0
-- Errands: 0.9
-- Other: 0.8
+### Auto-Categorization
+
+New tasks are automatically assigned to a category based on their title and description.
+
+### Subtask Suggestions
+
+When a task is created, the AI suggests relevant subtasks to help break the work into actionable steps.
+
+## 📦 Data Storage
+
+TaskWise uses SQLite stored at `data/taskwise.db` in the project directory.
+
+- All data stays on your server — nothing is sent to external services except AI API calls
+- No complex database setup required
+- Back up by copying the `data/` directory
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License — see the LICENSE file for details.
