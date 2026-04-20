@@ -367,23 +367,6 @@ function TaskWiseApp() {
     };
 
     try {
-      // Get current session to extract user ID
-      const sessionResponse = await fetch('/api/auth/session', {
-        credentials: 'include',  // Make sure to include credentials for auth
-      });
-      let userId: number | undefined = undefined;
-      
-      if (sessionResponse.ok) {
-        const sessionData = await sessionResponse.json();
-        userId = sessionData.user?.id;
-      } else {
-        toast({
-          title: "Authentication issue",
-          description: "Could not verify your identity. AI features may not work correctly.",
-          variant: "destructive"
-        });
-      }
-
       // --- AI Categorization (if needed) ---
       if (!taskCategory) {
         try {
@@ -391,7 +374,6 @@ function TaskWiseApp() {
           const aiCategory = await categorizeTask({
             taskDescription: newTask.title,
             categories: allCategories,
-            userId: userId,
           });
           newTask.category = aiCategory.category;
         } catch (error) {
@@ -419,11 +401,9 @@ function TaskWiseApp() {
             deadline: newTask.deadline?.toISOString() || new Date().toISOString(),
             importance: 5, // Default importance for now
             category: categoryForPrioritization, // Use determined category
-            userId: userId,
           }),
           suggestSubtasks({
             taskDescription: newTask.title,
-            userId: userId,
           })
         ]);
       } catch (error) {
