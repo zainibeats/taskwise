@@ -63,13 +63,17 @@ No `user_id` — a valid session simply means "authenticated."
 ## Auth Flow
 
 ### Middleware (`src/middleware.ts`)
+Next.js middleware runs in the Edge runtime and cannot use `better-sqlite3` directly. The middleware must determine auth state via an internal API call (same pattern as the current `middleware-check.ts`).
+
 ```
-1. Read app_config.password_hash
-2. If NULL → pass through (no auth required)
-3. If set → check session cookie
+1. GET /api/auth/config → { passwordSet: boolean }
+2. If passwordSet = false → pass through (no auth required)
+3. If passwordSet = true → check session cookie
    - Valid session → pass through
    - No/invalid session → redirect to /login
 ```
+
+Add `GET /api/auth/config` to the kept API routes. This replaces the current `middleware-check.ts` edge helper.
 
 ### Login (`/login`)
 - Password-only form (no username)
@@ -90,6 +94,7 @@ No `user_id` — a valid session simply means "authenticated."
 - `POST /api/auth/logout`
 - `POST /api/auth/set-password`
 - `GET /api/auth/session` (extend session expiry)
+- `GET /api/auth/config` (returns `{ passwordSet: boolean }` — used by middleware)
 
 ---
 
