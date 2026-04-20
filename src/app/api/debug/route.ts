@@ -1,16 +1,15 @@
 'use server';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth-utils';
+import { getCurrentSessionId } from '@/lib/session';
 import getDbConnection from '@/lib/db';
 
 // GET /api/debug - Debug endpoint to check API key storage
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
-    // Ensure this is only accessible by admin users
-    const user = await getUserFromSession(req);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const sessionId = await getCurrentSessionId();
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const db = getDbConnection();

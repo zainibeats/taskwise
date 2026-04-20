@@ -12,26 +12,26 @@ const API_KEY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Function to get the API key from database or environment variable
 const getApiKey = async (): Promise<string> => {
   const now = Date.now();
-  
+
   // If we have a cached key and it's not expired, use it
   if (cachedApiKey !== null && now - lastFetchTime < API_KEY_CACHE_DURATION) {
     return cachedApiKey;
   }
-  
+
   // Try to get the API key from database
   try {
     console.log("Fetching API key from user settings...");
     const userApiKey = await UserSettingsApi.getSetting('googleAiApiKey');
-    
+
     if (userApiKey && userApiKey.trim() !== '') {
       console.log("Found API key in user settings");
-      
+
       // Basic validation - Google AI keys usually start with 'AI'
       if (!userApiKey.startsWith('AI')) {
         console.warn("API key may not be valid - doesn't start with 'AI'");
         console.warn("This may cause API_KEY_INVALID errors from Google AI");
       }
-      
+
       // Cache the API key
       cachedApiKey = userApiKey;
       lastFetchTime = now;
@@ -42,15 +42,15 @@ const getApiKey = async (): Promise<string> => {
   } catch (error) {
     console.error('Error fetching API key from database:', error);
   }
-  
+
   // Fall back to environment variable - which should be empty now
   const envApiKey = process.env.GOOGLE_AI_API_KEY || '';
-  
+
   if (!envApiKey || envApiKey.trim() === '') {
     console.warn("No API key available - AI features will not work");
     console.warn("Please set an API key in the settings page");
   }
-  
+
   cachedApiKey = envApiKey;
   lastFetchTime = now;
   return cachedApiKey;
@@ -66,21 +66,21 @@ const fixApiKeyFormat = (apiKey: string): string => {
       return match[0];
     }
   }
-  
+
   // Remove any quotes that might be wrapping the key
-  if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || 
+  if ((apiKey.startsWith('"') && apiKey.endsWith('"')) ||
       (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
     console.log('Removed quotes from API key');
     return apiKey.substring(1, apiKey.length - 1);
   }
-  
+
   // Remove any whitespace
   const trimmedKey = apiKey.trim();
   if (trimmedKey !== apiKey) {
     console.log('Removed whitespace from API key');
     return trimmedKey;
   }
-  
+
   return apiKey;
 };
 
@@ -88,15 +88,15 @@ const fixApiKeyFormat = (apiKey: string): string => {
 export const createAiInstance = async () => {
   try {
     let apiKey = await getApiKey();
-    
+
     if (!apiKey || apiKey.trim() === '') {
       console.error("No valid API key available");
       throw new Error("No API key available. Please set an API key in the settings page.");
     }
-    
+
     // Apply fixes to API key format
     apiKey = fixApiKeyFormat(apiKey);
-    
+
     return genkit({
       promptDir: './prompts',
       plugins: [
@@ -104,7 +104,7 @@ export const createAiInstance = async () => {
           apiKey,
         }),
       ],
-      model: 'googleai/gemini-2.0-flash',
+      model: 'googleai/gemini-2.5-',
     });
   } catch (error) {
     console.error("Error creating AI instance:", error);
@@ -128,5 +128,5 @@ export const ai = genkit({
       apiKey: process.env.GOOGLE_AI_API_KEY || '',
     }),
   ],
-  model: 'googleai/gemini-2.0-flash',
+  model: 'googleai/gemini-2.5-flash',
 });

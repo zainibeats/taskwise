@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth-utils';
+import { getCurrentSessionId } from '@/lib/session';
 import getDbConnection from '@/lib/db';
 
 // Define setting type
@@ -8,26 +8,25 @@ interface UserSetting {
   [key: string]: any;
 }
 
-// GET /api/user-settings/[key] - Get a specific setting for the current user
+// GET /api/user-settings/[key] - Get a specific setting
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { key: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ key: string }> }
 ) {
   try {
-    // Get current session user
-    const user = await getUserFromSession(req);
-    if (!user) {
+    const sessionId = await getCurrentSessionId();
+    if (!sessionId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const key = params.key;
+    const { key } = await params;
 
     const db = getDbConnection();
     const setting = db.prepare(`
-      SELECT value 
+      SELECT value
       FROM user_settings
-      WHERE user_id = ? AND key = ?
-    `).get(user.id, key) as UserSetting | undefined;
+      WHERE key = ?
+    `).get(key) as UserSetting | undefined;
 
     if (!setting) {
       return NextResponse.json({ error: 'Setting not found' }, { status: 404 });
@@ -40,25 +39,24 @@ export async function GET(
   }
 }
 
-// DELETE /api/user-settings/[key] - Delete a specific setting for the current user
+// DELETE /api/user-settings/[key] - Delete a specific setting
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { key: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ key: string }> }
 ) {
   try {
-    // Get current session user
-    const user = await getUserFromSession(req);
-    if (!user) {
+    const sessionId = await getCurrentSessionId();
+    if (!sessionId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const key = params.key;
+    const { key } = await params;
 
     const db = getDbConnection();
     const result = db.prepare(`
       DELETE FROM user_settings
-      WHERE user_id = ? AND key = ?
-    `).run(user.id, key);
+      WHERE key = ?
+    `).run(key);
 
     if (result.changes === 0) {
       return NextResponse.json({ error: 'Setting not found' }, { status: 404 });
