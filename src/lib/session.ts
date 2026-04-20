@@ -1,51 +1,25 @@
-import { v4 as uuidv4 } from 'uuid';
 import { cookies } from 'next/headers';
 import getDbConnection from './db';
-import { User } from './user-config';
 
-// Session expiration time in milliseconds (default: 24 hours)
-const SESSION_EXPIRY = 24 * 60 * 60 * 1000;
-
-// Session cookie name
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const SESSION_COOKIE_NAME = 'taskwise_session';
 
-// Session type definition
 export interface Session {
   id: string;
-  user_id: number;
   expires: string;
-  data?: string;
-  user?: User;
 }
 
-/**
- * Create a new session for a user
- */
-export function createSession(user: User): string {
-  if (!user.id) {
-    throw new Error('User ID is required to create a session');
-  }
-
+export function createSession(): string {
   const db = getDbConnection();
-  const sessionId = uuidv4();
-  const expires = new Date(Date.now() + SESSION_EXPIRY).toISOString();
-
-  // Store session in database
-  db.prepare(`
-    INSERT INTO sessions (id, user_id, expires, data)
-    VALUES (?, ?, ?, ?)
-  `).run(sessionId, user.id, expires, JSON.stringify({ username: user.username, role: user.role }));
-
+  const sessionId = crypto.randomUUID();
+  const expires = new Date(Date.now() + SESSION_EXPIRY_MS).toISOString();
+  db.prepare('INSERT INTO sessions (id, expires) VALUES (?, ?)').run(sessionId, expires);
   return sessionId;
 }
 
-/**
- * Set the session cookie for a user
- */
 export async function setSessionCookie(sessionId: string): Promise<void> {
-  const expires = new Date(Date.now() + SESSION_EXPIRY);
+  const expires = new Date(Date.now() + SESSION_EXPIRY_MS);
   const cookieStore = await cookies();
-  
   cookieStore.set({
     name: SESSION_COOKIE_NAME,
     value: sessionId,
@@ -57,12 +31,8 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
   });
 }
 
-/**
- * Clear the session cookie
- */
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
-  
   cookieStore.set({
     name: SESSION_COOKIE_NAME,
     value: '',
@@ -74,86 +44,37 @@ export async function clearSessionCookie(): Promise<void> {
   });
 }
 
-/**
- * Get the current session from cookie
- */
 export async function getSessionFromCookie(): Promise<string | undefined> {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  
-  return sessionCookie?.value;
+  return cookieStore.get(SESSION_COOKIE_NAME)?.value;
 }
 
-/**
- * Get session by ID
- */
-export function getSessionById(sessionId: string): Session | null {
+export function isValidSession(sessionId: string): boolean {
   const db = getDbConnection();
-  
-  // Delete expired sessions
   db.prepare('DELETE FROM sessions WHERE expires < CURRENT_TIMESTAMP').run();
-  
-  // Get session
-  const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId) as Session | null;
-  
-  if (!session) {
-    return null;
-  }
-  
-  // Check if session is expired
-  if (new Date(session.expires) < new Date()) {
-    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
-    return null;
-  }
-  
-  // Get user info
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id) as User | null;
-  
-  if (!user) {
-    return null;
-  }
-  
-  return { ...session, user };
+  const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(sessionId) as Session | null;
+  return !!session;
 }
 
-/**
- * Get the current user's session
- */
-export async function getCurrentSession(): Promise<Session | null> {
+export async function getCurrentSessionId(): Promise<string | null> {
   const sessionId = await getSessionFromCookie();
-  
-  if (!sessionId) {
-    return null;
-  }
-  
-  return getSessionById(sessionId);
+  if (!sessionId) return null;
+  return isValidSession(sessionId) ? sessionId : null;
 }
 
-/**
- * Delete a session by ID
- */
 export function deleteSession(sessionId: string): void {
   const db = getDbConnection();
   db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
 }
 
-/**
- * Delete all sessions for a user
- */
-export function deleteUserSessions(userId: number): void {
+export function deleteAllSessions(): void {
   const db = getDbConnection();
-  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM sessions').run();
 }
 
-/**
- * Extend a session's expiration time
- */
 export async function extendSession(sessionId: string): Promise<void> {
   const db = getDbConnection();
-  const expires = new Date(Date.now() + SESSION_EXPIRY).toISOString();
-  
+  const expires = new Date(Date.now() + SESSION_EXPIRY_MS).toISOString();
   db.prepare('UPDATE sessions SET expires = ? WHERE id = ?').run(expires, sessionId);
-  
-  // Also update cookie
   await setSessionCookie(sessionId);
-} 
+}
