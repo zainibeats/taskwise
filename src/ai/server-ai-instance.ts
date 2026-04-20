@@ -63,8 +63,8 @@ const fixApiKeyFormat = (apiKey: string): string => {
 };
 
 // Create the AI instance with dynamic API key
-export const createServerAiInstance = async (userId?: number) => {
-  let apiKey = await getApiKeyFromDb(userId);
+export const createServerAiInstance = async () => {
+  let apiKey = await getApiKeyFromDb();
 
   // Validate the API key before creating the instance
   if (!apiKey || apiKey.trim() === '') {
@@ -99,10 +99,9 @@ export const createServerAiInstance = async (userId?: number) => {
 };
 
 // Export a function to get the current AI instance
-export const getServerAI = async (userId?: number) => {
+export const getServerAI = async () => {
   try {
-    // Create a new instance each time to get the latest API key
-    return await createServerAiInstance(userId);
+    return await createServerAiInstance();
   } catch (error) {
     console.error('Error creating AI instance:', error);
     throw error;
