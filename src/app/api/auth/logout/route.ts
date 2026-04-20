@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteSession, getSessionFromCookie } from '@/lib/session';
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
-    // Get session ID from cookie
     const sessionId = await getSessionFromCookie();
-    
     if (sessionId) {
-      // Delete session from database
       deleteSession(sessionId);
     }
-    
-    // Create response and clear cookie
-    const response = NextResponse.json(
-      { success: true },
-      { status: 200 }
-    );
-    
-    // Clear the session cookie
+
+    const response = NextResponse.json({ success: true }, { status: 200 });
     response.cookies.set({
       name: 'taskwise_session',
       value: '',
@@ -27,13 +18,9 @@ export async function POST(req: NextRequest) {
       secure: false,
       sameSite: 'lax',
     });
-    
     return response;
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.json(
-      { error: 'An error occurred during logout' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'An error occurred during logout' }, { status: 500 });
   }
 } 

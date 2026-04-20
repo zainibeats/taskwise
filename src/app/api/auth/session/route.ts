@@ -1,36 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentSession, extendSession } from '@/lib/session';
+import { getCurrentSessionId, extendSession } from '@/lib/session';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
-    // Get current session
-    const session = await getCurrentSession();
-    
-    if (!session || !session.user) {
-      return NextResponse.json({ 
-        authenticated: false,
-        user: null
-      }, { status: 401 });
+    const sessionId = await getCurrentSessionId();
+    if (!sessionId) {
+      return NextResponse.json({ authenticated: false }, { status: 401 });
     }
-    
-    // Extend session
-    await extendSession(session.id);
-    
-    // Return user data without sensitive information
-    return NextResponse.json({
-      authenticated: true,
-      user: {
-        id: session.user.id,
-        username: session.user.username,
-        role: session.user.role,
-        email: session.user.email
-      }
-    });
+    await extendSession(sessionId);
+    return NextResponse.json({ authenticated: true });
   } catch (error) {
     console.error('Session check error:', error);
-    return NextResponse.json(
-      { error: 'An error occurred checking session', authenticated: false },
-      { status: 500 }
-    );
+    return NextResponse.json({ authenticated: false, error: 'Session check failed' }, { status: 500 });
   }
 } 
