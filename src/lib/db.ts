@@ -2,80 +2,42 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-// Database connection singleton
 let dbInstance: Database.Database | null = null;
 
-/**
- * Get a singleton database connection
- * This ensures we reuse the same connection across all API requests
- */
 export function getDbConnection(): Database.Database {
   if (!dbInstance) {
-    // Ensure the data directory exists
     const DB_DIR = path.join(process.cwd(), 'data');
     if (!fs.existsSync(DB_DIR)) {
       fs.mkdirSync(DB_DIR, { recursive: true });
     }
 
     const DB_PATH = path.join(DB_DIR, 'taskwise.db');
-    
-    // Create database instance
     dbInstance = new Database(DB_PATH);
-    
-    // Enable foreign keys
     dbInstance.pragma('foreign_keys = ON');
-    
-    // Initialize tables
     initDb(dbInstance);
-    
-    console.log('SQLite database connection initialized');
   }
-  
   return dbInstance;
 }
 
-// Initialize tables
 function initDb(db: Database.Database) {
-  // Create users table
   db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
+    CREATE TABLE IF NOT EXISTS app_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
       password_hash TEXT,
-      email TEXT,
-      role TEXT NOT NULL DEFAULT 'user',
-      active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      last_login TEXT
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.prepare('INSERT OR IGNORE INTO app_config (id, password_hash) VALUES (1, NULL)').run();
 
-  // Create sessions table
   db.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
       expires TEXT NOT NULL,
-      data TEXT,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  // Create user_settings table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS user_settings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      key TEXT NOT NULL,
-      value TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE(user_id, key)
-    )
-  `);
-
-  // Create tasks table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,13 +48,10 @@ function initDb(db: Database.Database) {
       category TEXT,
       priority_score REAL,
       is_completed BOOLEAN DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      user_id INTEGER,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  // Create subtasks table
   db.exec(`
     CREATE TABLE IF NOT EXISTS subtasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,78 +62,112 @@ function initDb(db: Database.Database) {
     )
   `);
 
-  // Create categories table with user_id
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      icon TEXT NOT NULL,
-      user_id INTEGER,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE(name, user_id)
+      name TEXT NOT NULL UNIQUE,
+      icon TEXT NOT NULL
     )
   `);
 
-  // Add migrations for existing databases
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT NOT NULL UNIQUE,
+      value TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   migrateExistingData(db);
 }
 
-// Migrate existing data to support user authentication
 function migrateExistingData(db: Database.Database) {
-  // Check if we need to add user_id column to tasks
+  // Migrate tasks: rebuild without user_id if it exists
   try {
-    // Try to get a task and check if user_id exists
-    const testQuery = db.prepare("SELECT user_id FROM tasks LIMIT 1");
-    try {
-      testQuery.get();
-    } catch (error) {
-      // If error, we need to add the column
-      console.log('Migrating tasks table to add user_id column');
-      db.exec("ALTER TABLE tasks ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
+    const cols = (db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]).map(c => c.name);
+    if (cols.includes('user_id')) {
+      db.exec(`
+        CREATE TABLE tasks_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          description TEXT,
+          deadline TEXT,
+          importance INTEGER CHECK (importance BETWEEN 1 AND 10),
+          category TEXT,
+          priority_score REAL,
+          is_completed BOOLEAN DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO tasks_new (id, title, description, deadline, importance, category, priority_score, is_completed, created_at)
+          SELECT id, title, description, deadline, importance, category, priority_score, is_completed, created_at FROM tasks;
+        DROP TABLE tasks;
+        ALTER TABLE tasks_new RENAME TO tasks;
+      `);
     }
-  } catch (error) {
-    // Table doesn't exist yet or other error, skip
-  }
+  } catch {}
 
-  // Check if we need to add user_id column to categories
+  // Migrate categories: rebuild without user_id if it exists
   try {
-    // Try to get a category and check if user_id exists
-    const testQuery = db.prepare("SELECT user_id FROM categories LIMIT 1");
-    try {
-      testQuery.get();
-    } catch (error) {
-      // If error, we need to add the column
-      console.log('Migrating categories table to add user_id column');
-      db.exec("ALTER TABLE categories ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE");
-      
-      // Update unique constraint
-      db.exec("CREATE TABLE categories_new (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, icon TEXT NOT NULL, user_id INTEGER, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, UNIQUE(name, user_id))");
-      db.exec("INSERT INTO categories_new SELECT id, name, icon, user_id FROM categories");
-      db.exec("DROP TABLE categories");
-      db.exec("ALTER TABLE categories_new RENAME TO categories");
+    const cols = (db.prepare("PRAGMA table_info(categories)").all() as { name: string }[]).map(c => c.name);
+    if (cols.includes('user_id')) {
+      db.exec(`
+        CREATE TABLE categories_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          icon TEXT NOT NULL
+        );
+        INSERT OR IGNORE INTO categories_new (id, name, icon)
+          SELECT id, name, icon FROM categories WHERE user_id IS NULL;
+        DROP TABLE categories;
+        ALTER TABLE categories_new RENAME TO categories;
+      `);
     }
-  } catch (error) {
-    // Table doesn't exist yet or other error, skip
-  }
+  } catch {}
 
-  // Check if we need to add value column to user_settings
+  // Migrate user_settings: rebuild without user_id if it exists
   try {
-    // Try to get a setting and check if value column exists
-    const testQuery = db.prepare("SELECT value FROM user_settings LIMIT 1");
-    try {
-      testQuery.get();
-    } catch (error) {
-      // If error, we need to add the column
-      console.log('Migrating user_settings table to add value column');
-      db.exec("ALTER TABLE user_settings ADD COLUMN value TEXT");
+    const cols = (db.prepare("PRAGMA table_info(user_settings)").all() as { name: string }[]).map(c => c.name);
+    if (cols.includes('user_id')) {
+      db.exec(`
+        CREATE TABLE user_settings_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          key TEXT NOT NULL UNIQUE,
+          value TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT OR IGNORE INTO user_settings_new (key, value, created_at, updated_at)
+          SELECT key, value, created_at, updated_at FROM user_settings;
+        DROP TABLE user_settings;
+        ALTER TABLE user_settings_new RENAME TO user_settings;
+      `);
     }
-  } catch (error) {
-    // Table doesn't exist yet or other error, skip
-    console.log('Error checking user_settings table:', error);
-  }
+  } catch {}
+
+  // Migrate sessions: rebuild without user_id if it exists
+  try {
+    const cols = (db.prepare("PRAGMA table_info(sessions)").all() as { name: string }[]).map(c => c.name);
+    if (cols.includes('user_id')) {
+      db.exec(`
+        CREATE TABLE sessions_new (
+          id TEXT PRIMARY KEY,
+          expires TEXT NOT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        DROP TABLE sessions;
+        ALTER TABLE sessions_new RENAME TO sessions;
+      `);
+    }
+  } catch {}
+
+  // Drop users table if it exists (no longer needed)
+  try {
+    db.exec('DROP TABLE IF EXISTS users');
+  } catch {}
 }
 
-// Graceful shutdown handler
 if (typeof process !== 'undefined') {
   process.on('exit', () => {
     if (dbInstance) {
@@ -184,5 +177,4 @@ if (typeof process !== 'undefined') {
   });
 }
 
-// Export the singleton getter
 export default getDbConnection;
