@@ -9,7 +9,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/ui/sidebar';
 import { cookies } from 'next/headers';
-import { migrateDatabase } from '@/lib/db-migrations';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -21,15 +20,6 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-// Check if we're on the server side and run migrations
-if (typeof window === 'undefined') {
-  try {
-    migrateDatabase();
-    console.log('Database migrations completed during startup');
-  } catch (error) {
-    console.error('Error running database migrations:', error);
-  }
-}
 
 export const metadata: Metadata = {
   title: 'TaskWise',
