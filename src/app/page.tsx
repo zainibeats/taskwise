@@ -366,7 +366,7 @@ function TaskWiseApp() {
           newTask.category = "Other"; // Default fallback
           toast({
             title: "AI categorization unavailable",
-            description: "Using 'Other' category. Check your API key in settings.",
+            description: "Using 'Other' category. Check your AI provider configuration in .env.",
             variant: "destructive"
           });
         }
@@ -399,7 +399,7 @@ function TaskWiseApp() {
         
         toast({
           title: "AI features unavailable",
-          description: "Using default values. Check your API key in settings.",
+          description: "Using default values. Check your AI provider configuration in .env.",
           variant: "destructive"
         });
       }

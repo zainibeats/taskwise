@@ -35,9 +35,9 @@ Return ONLY valid JSON with no explanation: {"subtasks": ["subtask 1", "subtask 
     let errorMessage = 'Failed to generate subtasks. ';
     if (error instanceof Error) {
       if (error.message.includes('API_KEY_INVALID')) {
-        errorMessage += 'Your API key appears to be invalid. Please check settings.';
-      } else if (error.message.includes('No valid API key')) {
-        errorMessage += 'Please add a valid API key in settings.';
+        errorMessage += 'Your API key appears to be invalid. Check GOOGLE_AI_API_KEY in .env.';
+      } else if (error.message.includes('No valid API key') || error.message.includes('environment variable is not set')) {
+        errorMessage += 'Please set the required API key in your .env file.';
       } else if (error.message.includes('PERMISSION_DENIED')) {
         errorMessage += "Your API key doesn't have permission to use this service.";
       } else if (error.message.includes('QUOTA_EXCEEDED')) {

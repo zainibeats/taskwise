@@ -14,15 +14,7 @@ export async function GET(_req: NextRequest) {
     const db = getDbConnection();
 
     const settings = db.prepare(`
-      SELECT id, key,
-             CASE WHEN key = 'googleAiApiKey' THEN
-               CASE WHEN value IS NULL THEN 'NULL'
-                    WHEN value = '' THEN 'EMPTY'
-                    ELSE SUBSTR(value, 1, 5) || '...' || SUBSTR(value, -3)
-               END
-             ELSE value END AS masked_value,
-             LENGTH(value) as value_length,
-             created_at, updated_at
+      SELECT id, key, value, LENGTH(value) as value_length, created_at, updated_at
       FROM user_settings
     `).all();
 
