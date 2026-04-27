@@ -16,6 +16,7 @@ taskwise.db
 
 # env
 .env
+.env.test.local
 
 # testing
 /coverage
