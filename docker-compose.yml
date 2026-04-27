@@ -1,20 +1,20 @@
 services:
   taskwise:
-    # Option 1: Pull pre-built image from Docker Hub
-    # image: skimming124/taskwise:latest    
-    # Option 2: Build from local Dockerfile (comment out Option 1 above and uncomment below to use)
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: /api
+    ## Option 1: Pull pre-built image from Docker Hub
+    image: skimming124/taskwise:latest
+    ## Option 2: Build from local Dockerfile (comment out Option 1 above and uncomment below to use)
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   args:
+    #     NEXT_PUBLIC_API_URL: /api
+    container_name: taskwise
+    restart: unless-stopped
     network_mode: host
     env_file:
       - .env
     environment:
       - NODE_ENV=production
-    restart: unless-stopped
-    container_name: taskwise
     volumes:
       - taskwise-data:/app/data
       - taskwise-logs:/app/logs
